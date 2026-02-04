@@ -3,6 +3,7 @@
 Shortcodes live in includes/shortcodes/*.html
 
 They are invoked by `<% .<name> <args> %>`
+
 Example shortcode:
 
 ```html
