@@ -7,7 +7,7 @@ Novos
 <p align="center"> Build at the speed of thought.</p>
 
 > [!WARNING]
-> This is currently beta software. Expect bugs.
+> This is currently beta software.
 
 # Features
 - Sass transpilation
@@ -17,6 +17,18 @@ Novos
 - Variables
 - Templates
 
+# Support OSes
+
+### Tier 1
+
+-  OmniOS CE
+-  FreeBSD
+
+### Tier 2
+
+- Ubuntu LTS (Noble) GNU/Linux
+- Arch Linux
+- Void Linux
 
 # License
 
