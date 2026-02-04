@@ -3,10 +3,11 @@
 # novos
 > Build at the speed of thought.
 
+</div>
+
 > [!WARNING]
 > This is currently beta software.
 
-</div>
 
 ## Features
 - **Sass transpilation** via native `grass` (no C++ or Node.js required)
