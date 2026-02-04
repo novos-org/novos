@@ -3,7 +3,7 @@
 # novos
 <img src="./assets/icon.png" alt="novos logo" width="250" height="250">
 
- Build at the speed of thought.
+<small> Build at the speed of thought.</small>
 
 </div>
 
