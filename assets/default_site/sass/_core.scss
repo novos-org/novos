@@ -525,3 +525,50 @@ section {
   }
 }
 
+
+
+/* --- 10. COPY BUTTON ENHANCEMENT --- */
+pre {
+  position: relative; // Required for absolute positioning of the button
+  
+  .copy-code-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    
+    // Applying your theme mixin & variables
+    @include glass-panel;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    
+    &:hover {
+      background: var(--primary);
+      color: #000; // Contrast against primary color
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &.active {
+      background:  rgba(207, 253, 255, 0.1);
+      color: #fff;
+      border-color: #bbbfff;
+    }
+  }
+
+  // Smooth padding adjustment to keep text away from the button
+  code {
+    display: block;
+    padding-right: 50px; 
+  }
+}

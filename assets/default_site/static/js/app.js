@@ -19,3 +19,36 @@ const initTheme = () => {
     }
 };
 initTheme();
+document.querySelectorAll('pre').forEach((block) => {
+  // 1. Create the button
+  const button = document.createElement('button');
+  button.innerText = 'Copy';
+  button.className = 'copy-code-button';
+  button.type = 'button'; // Prevent accidental form submits
+
+  // 2. Inject it
+  block.appendChild(button);
+
+  // 3. Logic
+  button.addEventListener('click', async () => {
+    const code = block.querySelector('code');
+    const text = code ? code.innerText : block.innerText;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      
+      // Feedback State
+      button.innerText = 'Copied!';
+      button.classList.add('active');
+      
+      // Reset
+      setTimeout(() => {
+        button.innerText = 'Copy';
+        button.classList.remove('active');
+      }, 2000);
+    } catch (err) {
+      button.innerText = 'Error';
+      console.error('Copy failed', err);
+    }
+  });
+});
