@@ -18,6 +18,7 @@
 - **Self-Contained** binary with embedded assets via `rust-embed`
 - **Shortcodes, Includes, & Variables** for flexible templating
 - **RSS** generation baked-in
+- **search.json**, so you can search
 
 ## Supported OSes
 
