@@ -1,6 +1,8 @@
 <div align="center">
 
 # novos
+<img src="./assets/logo.png" alt="novos logo" width="500" height="500">
+
 > Build at the speed of thought.
 
 </div>
