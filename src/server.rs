@@ -34,11 +34,11 @@ pub fn serve(
     watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
 
     // server
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("0.0.0.0:{}", port);
     let server = tiny_http::Server::http(&addr)
         .map_err(|e| anyhow::Error::msg(e.to_string()))?;
 
-    println!("\x1b[33m hanging out at http://localhost:{}\x1b[0m", port);
+    println!("\x1b[33m Thinking at http://0.0.0.0:{}\x1b[0m", port);
 
     for request in server.incoming_requests() {
         let url: &str = request.url().split('?').next().unwrap_or("/");
@@ -50,18 +50,33 @@ pub fn serve(
             if alt.exists() { full = alt; }
         }
 
-        let response = match fs::read(full) {
-            Ok(d) => {
-                let ct = if f_path.ends_with(".css") { "text/css" }
-                         else if f_path.ends_with(".xml") { "application/xml" }
-                         else { "text/html" };
-                tiny_http::Response::from_data(d).with_header(
-                    tiny_http::Header::from_bytes(&b"Content-Type"[..], ct.as_bytes()).unwrap()
-                )
-            },
-            Err(_) => tiny_http::Response::from_string("404 - no leaves found").with_status_code(404),
+ let response = match fs::read(&full) {
+    Ok(d) => {
+        // Extract extension from the actual file path being served
+        let extension = full.extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+
+        let ct = match extension {
+            "css"  => "text/css",
+            "js"   => "application/javascript",
+            "json" => "application/json",
+            "xml"  => "application/xml",
+            "png"  => "image/png",
+	    "svg"  => "image/svg+xml",
+            "jpg" | "jpeg" => "image/jpeg",
+            "svg"  => "image/svg+xml",
+            "txt"  => "text/plain",
+            _      => "text/html; charset=utf-8", // Default for .html or extensionless
         };
-        let _ = request.respond(response);
+
+        tiny_http::Response::from_data(d).with_header(
+            tiny_http::Header::from_bytes(&b"Content-Type"[..], ct.as_bytes()).unwrap()
+        )
+    },
+    Err(_) => tiny_http::Response::from_string("404 - no philosophies found").with_status_code(404),
+};
+let _ = request.respond(response);
     }
 
     Ok(())
