@@ -1,23 +1,22 @@
-<h1>
-<p align="center">
-novos
-</p>
-</h1>
+<div align="center">
 
-<p align="center"> Build at the speed of thought.</p>
+# novos
+> Build at the speed of thought.
 
 > [!WARNING]
 > This is currently beta software.
 
-# Features
-- **Sass transpilation**
-- **Shortcodes**
-- **Includes**
-- **RSS generation**
-- **Variables**
-- **Templates**
+</div>
 
-# Supported OSes
+## Features
+- **Sass transpilation** via native `grass` (no C++ or Node.js required)
+- **Fast Parallelism** utilizing `Rayon` for multi-core page generation
+- **Live Reloading** with non-blocking `notify` event monitoring
+- **Self-Contained** binary with embedded assets via `rust-embed`
+- **Shortcodes, Includes, & Variables** for flexible templating
+- **RSS & Atom** generation baked-in
+
+## Supported OSes
 
 | Tier | Operating System | Notes |
 | :--- | :--- | :--- |
@@ -27,12 +26,11 @@ novos
 | **Tier 2** | Arch Linux | Verified compatibility |
 | **Tier 2** | Void Linux | Verified compatibility |
 
-# Engine
-- **Core:** Rust (2024 Edition)
-- **Parallelism:** Work-stealing scheduling via `Rayon`
-- **Styling:** Native `grass` compiler (No Ruby/Node dependency)
-- **IO:** Non-blocking event monitoring via `notify`
+## Engine
+- **Language:** Rust (2024 Edition)
+- **Markdown:** `pulldown-cmark` (CommonMark compliant)
+- **License:** 3-Clause BSD
 
-# License
+---
 
-novos is free software. Released under the 3-Clause BSD license.
+Copyright © 2026 xer
