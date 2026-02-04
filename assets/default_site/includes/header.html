@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title><% print title %> - Your Site</title>
+
+    <link rel="stylesheet" href="<% base %>/css/app.css">
+    <script src="<% base %>/js/app.js" defer></script>
+
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="wrapper">
+                <ul>
+                    <li>
+                        <a href="<% base %>/">
+                            index
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<% base %>/blog">
+                            blog
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        <button onclick="toggleTheme()">
+          Toggle Dark Mode
+        </button>
+    </header>

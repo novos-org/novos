@@ -1,0 +1,9 @@
+.build/
+public/
+.DS_Store
+*~
+*.swp
+Thumbs.db
+node_modules/
+**/target/
+target/

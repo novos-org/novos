@@ -1,0 +1,43 @@
+// app.scss
+@use 'core' as c;
+
+body {
+  @include c.font-stack;
+  background-color: var(--bg-body);
+  padding: 50px;
+  color: c.$text-main;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrapper {
+  width: 860px;
+  margin: 0 auto;
+  position: relative;
+}
+
+section {
+  width: 500px;
+  float: right;
+  margin-left: 360px; 
+  padding-bottom: 50px;
+}
+
+header ul {
+  list-style: none;
+  display: flex;
+  width: 269px;
+  background: c.$bg-gray;
+  border: 1px solid c.$border-color;
+  border-radius: 5px;
+  
+  a {
+    color: c.$text-muted;
+    text-align: center;
+    strong { color: c.$text-dark; display: block; }
+  }
+}
+
+// Include your desktop-specific media queries here
+@media screen and (max-width: 960px) {
+  section { margin-left: 0; float: none; width: auto; }
+}
