@@ -64,11 +64,11 @@ Benchmark 1: hugo
   Range (min … max):    1.910 s …  1.966 s    10 runs
 ```
 
-### In a Pie chart
-
+### In a bar chart
 ```mermaid
-pie title Build Time Comparison
-    "Zola (4.87s)" : 4.87
-    "Hugo (1.93s)" : 1.93
-    "novos (0.68s)" : 0.68
+xychart-beta
+    title "Build Time (seconds) - Lower is Better"
+    x-axis [Zola, Hugo, novos]
+    y-axis "Time (s)" 0 --> 5
+    bar [4.87, 1.93, 0.68]
 ```
