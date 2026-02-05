@@ -1,20 +1,26 @@
-# Shortcodes - docs
+# Shortcodes
+Shortcodes are reusable HTML components stored in your includes/shortcodes/ directory. They allow you to inject complex UI elements into Markdown and templates without writing inline HTML.
 
-Shortcodes live in includes/shortcodes/*.html
+# Storage & Naming
+- **Path**: includes/shortcodes/*.html
+- **Naming**: The filename (minus the .html extension) becomes the command name.
+    - **Example**: includes/shortcodes/notice.html is called via <% .notice %>.
 
-They are invoked by `<% .<name> <args> %>`.
-
-Example shortcode:
-
+# Invocation Syntax
+Shortcodes use a dot-prefix to distinguish them from standard variables or includes.
 ```html
-<div class="video-container">
-    <iframe 
-        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-        src="https://www.youtube.com/embed/<%= a1 =%>" 
-        title="YouTube video player" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        allowfullscreen>
-    </iframe>
-</div>
+<% .shortcode_name "arg1" "arg2" "arg3" %>
 ```
-Inside a shortcode, the arguments are available as <%= a<arg.num> =%>.
+
+> [!TIP]
+> Arguments with spaces: Wrap them in double quotes. Simple arguments: Quotes are optional if there are no spaces (e.g., `<% .youtube dQw4w9WgXcQ` %>).
+
+# Internal Logic
+Inside the .html file, arguments are accessed via indexed variables starting at 1.
+
+| Variable | Usage |
+|---|---|
+| `<%= a1 =%>` | The first argument passed. |
+| `<%= a2 =%>` | The second argument passed. |
+
+And so on.
