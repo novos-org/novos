@@ -10,6 +10,8 @@
 > [!WARNING]
 > This is currently beta software.
 
+## What is novos?
+novos is a lightning-fast static site generator (SSG) built in Rust. It takes your Markdown files and turns them into a website in milliseconds.
 
 ## Features
 - **Sass transpilation** via native `grass` (no C++ or Node.js required)
