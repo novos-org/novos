@@ -60,7 +60,7 @@ Documentation is available at [docs/](./docs)
 
 ### In text form
 
-```text
+```bash
 ~/dev/stress/sitez $ hyperfine --warmup 3 "zola build"
 Benchmark 1: zola build
   Time (mean ± σ):      4.874 s ±  0.014 s    [User: 3.949 s, System: 1.354 s]
