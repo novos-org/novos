@@ -5,6 +5,9 @@
 
 <small> Build at the speed of thought.</small>
 
+
+![License](https://img.shields.io/badge/license-3--Clause%20BSD-blue)
+![Rust](https://img.shields.io/badge/rust-2024%20edition-orange)
 </div>
 
 > [!WARNING]
