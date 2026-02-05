@@ -6,7 +6,7 @@
 PREFIX="/usr/local"
 BINARY_NAME="novos"
 GH_LINK="https://github.com/novos-org/novos"
-TAG="v0.1.0-beta"
+TAG="v0.1.4"
 
 # System Detection
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
