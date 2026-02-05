@@ -5,47 +5,47 @@ use std::{collections::HashMap, fs, time::SystemTime};
 
 /// Parses frontmatter from a file and returns a Post struct.
 pub fn parse_frontmatter(raw: &str, slug: &str, mtime: SystemTime) -> Post {
-let (mut title, mut date, mut tags) = (slug.to_string(), String::new(), Vec::new());
-let mut content = raw.to_string();
+    let (mut title, mut date, mut tags) = (slug.to_string(), String::new(), Vec::new());
+    let mut content = raw.to_string();
 
-if raw.starts_with("---") {
-let parts: Vec<&str> = raw.splitn(3, "---").collect();
-if parts.len() == 3 {
-for line in parts[1].lines() {
-if let Some((k, v)) = line.split_once(':') {
-match k.trim() {
-"title" => title = v.trim().trim_matches('"').to_string(),
-"date" => date = v.trim().to_string(),
-"tags" => {
-tags = v
-.split(',')
-.map(|s| s.trim().trim_matches('"').to_string())
-.filter(|s| !s.is_empty())
-.collect();
-}
-_ => {}
-}
-}
-}
-content = parts[2].trim().to_string();
-}
-}
+    if raw.starts_with("---") {
+        let parts: Vec<&str> = raw.splitn(3, "---").collect();
+        if parts.len() == 3 {
+            for line in parts[1].lines() {
+                if let Some((k, v)) = line.split_once(':') {
+                    match k.trim() {
+                        "title" => title = v.trim().trim_matches('"').to_string(),
+                        "date" => date = v.trim().to_string(),
+                        "tags" => {
+                            tags = v
+                                .split(',')
+                                .map(|s| s.trim().trim_matches('"').to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            content = parts[2].trim().to_string();
+        }
+    }
 
-Post {
-slug: slug.to_string(),
-title,
-date,
-tags,
-raw_content: content,
-mtime,
-}
+    Post {
+        slug: slug.to_string(),
+        title,
+        date,
+        tags,
+        raw_content: content,
+        mtime,
+    }
 }
 
 /// Renders Markdown string to HTML using pulldown-cmark.
 pub fn render_markdown(md: &str) -> String {
-let mut body = String::new();
-html::push_html(&mut body, Parser::new_ext(md, Options::all()));
-body
+    let mut body = String::new();
+    html::push_html(&mut body, Parser::new_ext(md, Options::all()));
+    body
 }
 
 /// The core engine: recursively resolves <% tags %>, handles variables, 
@@ -84,11 +84,16 @@ pub fn resolve_tags(
                 }
             } else {
                 match tag {
-                    // --- NEW CONFIG TAGS ---
+                    // --- GLOBAL CONFIG TAGS ---
                     "base" => output.push_str(&config.base),
                     "base_url" => output.push_str(&config.base_url),
                     
-                    // --- EXISTING TAGS ---
+                    // --- SITE METADATA TAGS (NEW) ---
+                    "site_title" => output.push_str(&config.site.title),
+                    "site_description" => output.push_str(&config.site.description),
+                    "site_author" => output.push_str(&config.site.author),
+                    
+                    // --- POST METADATA TAGS ---
                     "posts" => output.push_str(posts_html),
                     "title" => output.push_str(&post.title),
                     "date" => output.push_str(&post.date),
@@ -100,6 +105,7 @@ pub fn resolve_tags(
                     }
                     "content" => output.push_str(body.unwrap_or(&post.raw_content)),
                     
+                    // --- DIRECTIVES (Includes & Shortcodes) ---
                     _ if tag.starts_with("include ") => {
                         let filename = tag[8..].trim();
                         let path = config.includes_dir.join(filename);
@@ -119,10 +125,12 @@ pub fn resolve_tags(
                         }
                     }
 
+                    // --- FALLBACK TO LOCAL VARIABLES ---
                     _ => {
                         if let Some(val) = vars.get(tag) {
                             output.push_str(val);
                         } else {
+                            // If tag is unrecognized, leave it as is for debugging
                             output.push_str(&rem[..end + 2]);
                         }
                     }
@@ -147,7 +155,7 @@ fn render_shortcode(template: &str, args: &[String]) -> String {
     rendered
 }
 
-
+/// Strips Markdown syntax to produce clean plain text for search indexing.
 pub fn strip_markdown(md: &str) -> String {
     let parser = Parser::new(md);
     let mut plain_text = String::new();
@@ -156,7 +164,7 @@ pub fn strip_markdown(md: &str) -> String {
         match event {
             Event::Text(text) | Event::Code(text) => {
                 plain_text.push_str(&text);
-                plain_text.push(' '); // Prevent words from clumping together
+                plain_text.push(' ');
             }
             _ => {}
         }

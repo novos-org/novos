@@ -10,7 +10,7 @@ use serde_json::json;
 use std::{
     collections::HashMap,
     fs, io,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Instant, SystemTime},
 };
@@ -31,6 +31,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 /// Compiles SCSS/SASS files located in the `sass/` directory using the `grass` crate.
+/// Respects the `sass_style` setting (expanded vs compressed) from novos.toml.
 pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     let sass_dir = Path::new("sass");
     if !sass_dir.exists() {
@@ -39,6 +40,12 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
 
     let css_dir = config.output_dir.join("css");
     fs::create_dir_all(&css_dir)?;
+
+    let style = match config.build.sass_style.as_str() {
+        "compressed" => grass::OutputStyle::Compressed,
+        _ => grass::OutputStyle::Expanded,
+    };
+    let options = grass::Options::default().style(style);
 
     for entry in fs::read_dir(sass_dir)? {
         let entry = entry?;
@@ -55,7 +62,7 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
                 println!("\x1b[2m  compiling\x1b[0m {}", file_name);
             }
 
-            match grass::from_path(&path, &grass::Options::default()) {
+            match grass::from_path(&path, &options) {
                 Ok(css) => {
                     let mut out_path = css_dir.join(file_name);
                     out_path.set_extension("css");
@@ -82,10 +89,15 @@ pub fn perform_build(
     println!("Novos build v{}", env!("CARGO_PKG_VERSION"));
 
     // Step 1: Cleaning and Static Assets
-    println!("\x1b[2m[1/4]\x1b[0m Cleaning output directory...");
-    if config.output_dir.exists() {
-        let _ = fs::remove_dir_all(&config.output_dir);
+    if config.build.clean_output {
+        println!("\x1b[2m[1/4]\x1b[0m Cleaning output directory...");
+        if config.output_dir.exists() {
+            let _ = fs::remove_dir_all(&config.output_dir);
+        }
+    } else {
+        println!("\x1b[2m[1/4]\x1b[0m Preparing output directory...");
     }
+    
     fs::create_dir_all(&config.output_dir)?;
 
     if config.static_dir.exists() {
@@ -139,6 +151,7 @@ pub fn perform_build(
     // Step 4: Rendering and Metadata
     println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
 
+    // Parallel render posts
     posts.par_iter().for_each(|p| {
         let dest = config.output_dir.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
@@ -150,29 +163,31 @@ pub fn perform_build(
         }
     });
 
-    // Generate RSS Feed
-    let rss_xml = rss::generate_rss(&posts, config);
-    fs::write(config.output_dir.join("rss.xml"), rss_xml)?;
-
-    // Generate search.json with stripped Markdown snippets
-    if verbose {
-        println!("\x1b[2m  indexing search content\x1b[0m");
+    // Optional RSS Feed
+    if config.site.generate_rss {
+        if verbose { println!("\x1b[2m  generating rss\x1b[0m"); }
+        let rss_xml = rss::generate_rss(&posts, config);
+        fs::write(config.output_dir.join("rss.xml"), rss_xml)?;
     }
-    let search_index: Vec<serde_json::Value> = posts.iter().map(|p| {
-        // Strip Markdown for a clean search experience
-        let clean_text = parser::strip_markdown(&p.raw_content);
-        let snippet: String = clean_text.chars().take(140).collect();
 
-        json!({
-            "title": p.title,
-            "slug": p.slug,
-            "date": p.date,
-            "tags": p.tags,
-            "snippet": snippet
-        })
-    }).collect();
-    
-    fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
+    // Optional Search Index
+    if config.site.generate_search {
+        if verbose { println!("\x1b[2m  indexing search content\x1b[0m"); }
+        let search_index: Vec<serde_json::Value> = posts.iter().map(|p| {
+            let clean_text = parser::strip_markdown(&p.raw_content);
+            let snippet: String = clean_text.chars().take(140).collect();
+
+            json!({
+                "title": p.title,
+                "slug": p.slug,
+                "date": p.date,
+                "tags": p.tags,
+                "snippet": snippet
+            })
+        }).collect();
+        
+        fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
+    }
 
     // Process additional HTML pages
     if config.pages_dir.exists() {
@@ -200,7 +215,7 @@ pub fn perform_build(
     // Render Home Page
     let index_meta = Post {
         slug: "index".to_string(),
-        title: "home".to_string(),
+        title: config.site.title.clone(),
         date: "".to_string(),
         tags: vec![],
         raw_content: "<% include home.html %>".to_string(),
