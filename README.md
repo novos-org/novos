@@ -83,3 +83,8 @@ xychart-beta
     y-axis "Time (s)" 0 --> 5
     bar [4.87, 1.93, 0.68]
 ```
+
+#### How novos achieves < 1s builds:
+- **Zero-Copy Parsing**: Leveraging pulldown-cmark's event-based parser.
+- **Work-Stealing Parallelism**: Rayon dynamically balances page rendering across all available CPU threads.
+- **Sass compilation techniques**: Using native grass avoids the overhead of external process calls to Node or Dart.
