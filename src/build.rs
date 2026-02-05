@@ -16,9 +16,6 @@ use std::{
 };
 
 /// Recursively copies all files from the source directory to the destination.
-/// 
-/// Used for moving static assets into the final build directory without 
-/// modification.
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
     for entry in fs::read_dir(src)? {
@@ -34,9 +31,6 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 /// Compiles SCSS/SASS files located in the `sass/` directory using the `grass` crate.
-/// 
-/// Files starting with an underscore (`_`) are treated as partials and ignored
-/// from direct compilation.
 pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     let sass_dir = Path::new("sass");
     if !sass_dir.exists() {
@@ -77,12 +71,6 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
 }
 
 /// The primary entry point for the `novos` build process.
-/// 
-/// Orchestrates the four-step build pipeline:
-/// 1. Clean and Assets
-/// 2. Stylesheet compilation
-/// 3. Markdown content processing
-/// 4. Page rendering and metadata (RSS/Search) generation.
 pub fn perform_build(
     config: &Config,
     last_run_mu: Arc<Mutex<SystemTime>>,
@@ -138,7 +126,7 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
-    // Generate Global Post List (for injections)
+    // Generate Global Post List
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
         posts_html.push_str(&format!(
@@ -151,7 +139,6 @@ pub fn perform_build(
     // Step 4: Rendering and Metadata
     println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
 
-    // Parallel render of all Markdown posts
     posts.par_iter().for_each(|p| {
         let dest = config.output_dir.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
@@ -167,19 +154,24 @@ pub fn perform_build(
     let rss_xml = rss::generate_rss(&posts, config);
     fs::write(config.output_dir.join("rss.xml"), rss_xml)?;
 
-    // Generate search.json for client-side search
+    // Generate search.json with stripped Markdown snippets
     if verbose {
         println!("\x1b[2m  indexing search content\x1b[0m");
     }
     let search_index: Vec<serde_json::Value> = posts.iter().map(|p| {
+        // Strip Markdown for a clean search experience
+        let clean_text = parser::strip_markdown(&p.raw_content);
+        let snippet: String = clean_text.chars().take(140).collect();
+
         json!({
             "title": p.title,
             "slug": p.slug,
             "date": p.date,
             "tags": p.tags,
-            "snippet": p.raw_content.chars().take(140).collect::<String>()
+            "snippet": snippet
         })
     }).collect();
+    
     fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
 
     // Process additional HTML pages
