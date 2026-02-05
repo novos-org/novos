@@ -1,9 +1,9 @@
 <div align="center">
 
-# novos
+# **novos**
 <img src="./assets/icon.png" alt="novos logo" width="250" height="250">
 
-<small> Build at the speed of thought.</small>
+**Build at the speed of thought.**
 
 
 ![License](https://img.shields.io/badge/license-3--Clause%20BSD-blue)
@@ -11,7 +11,7 @@
 </div>
 
 > [!WARNING]
-> This is currently beta software.
+> **novos** is currently beta software. Expect frequent updates and potential breaking changes as we approach v1.0.
 
 ## What is novos?
 novos is a lightning-fast static site generator (SSG) built in Rust. It takes your Markdown files and turns them into a website in milliseconds.
