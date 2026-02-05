@@ -6,6 +6,7 @@
 PREFIX="/usr/local"
 BINARY_NAME="novos"
 GH_LINK="https://github.com/novos-org/novos"
+TAG="v0.1.0-beta"
 
 # System Detection
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -15,8 +16,6 @@ ARCH_TYPE=$(uname -m)
 if [ "$ARCH_TYPE" = "amd64" ] || [ "$ARCH_TYPE" = "x86_64" ]; then
     ARCH_TYPE="x86_64"
 fi
-
-TARGET_BINARY="novos-${OS_TYPE}-${ARCH_TYPE}"
 
 show_help() {
     cat <<EOF
@@ -33,11 +32,12 @@ EOF
 }
 
 show_info() {
+    # We calculate these on the fly so they reflect manual changes
     echo "--- System Information ---"
-    echo "Detected OS:   $OS_TYPE"
-    echo "Detected Arch: $ARCH_TYPE"
-    echo "Target Binary: $TARGET_BINARY"
-    echo "Install Path:  $PREFIX/bin/$BINARY_NAME"
+    echo "Detected OS:    $OS_TYPE"
+    echo "Detected Arch:  $ARCH_TYPE"
+    echo "Target Binary:  novos-${OS_TYPE}-${ARCH_TYPE}"
+    echo "Install Path:   $PREFIX/bin/$BINARY_NAME"
     echo "--------------------------"
 }
 
@@ -73,13 +73,30 @@ while [ $# -gt 0 ]; do
 done
 
 perform_install() {
+    # Re-evaluate variables at time of execution
+    TARGET_BINARY="novos-${OS_TYPE}-${ARCH_TYPE}"
+    FULL_PATH="$PREFIX/bin/$BINARY_NAME"
+    
     echo "Installing $BINARY_NAME for $OS_TYPE ($ARCH_TYPE)..."
     
-    curl -L "$GH_LINK/releases/latest/download/$TARGET_BINARY" -o "$PREFIX/bin/$BINARY_NAME"
-    chmod +x "$PREFIX/bin/$BINARY_NAME"
+    # Ensure directory exists
+    mkdir -p "$PREFIX/bin" || { echo "Error: Cannot create $PREFIX/bin. Try sudo?"; exit 1; }
+
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "Error: curl is required but not installed."
+        exit 1
+    fi
+
+    curl -s -A "Mozilla/5.0" -L "$GH_LINK/releases/download/$TAG/$TARGET_BINARY" -o "$FULL_PATH"
     
-    echo "Successfully installed to $PREFIX/bin/$BINARY_NAME"
-    echo "Build at the speed of thought."
+    if [ $? -eq 0 ]; then
+        chmod +x "$FULL_PATH"
+        echo "Successfully installed to $FULL_PATH"
+        echo "Build at the speed of thought."
+    else
+        echo "Download failed. Please check your connection or the TAG version."
+        exit 1
+    fi
 }
 
 show_menu() {
@@ -97,8 +114,7 @@ show_menu() {
 # Main Loop
 while true; do
     show_menu
-    read sel
-    # Handle default enter press
+    read -r sel
     if [ -z "$sel" ]; then sel=1; fi
 
     case "$sel" in
@@ -108,11 +124,11 @@ while true; do
             ;;
         2)
             printf "New Prefix: "
-            read PREFIX
+            read -r PREFIX
             ;;
         3)
             printf "New Binary Name: "
-            read BINARY_NAME
+            read -r BINARY_NAME
             ;;
         4)
             show_info
