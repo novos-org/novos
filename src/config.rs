@@ -105,9 +105,17 @@ pub struct BuildSettings {
     #[serde(default = "default_bool_false")]
     pub minify_html: bool,
 
+    /// Toggle for syntax highlighting.
+    #[serde(default = "default_bool_true")]
+    pub use_syntect: bool,
+
     /// Syntax highlighting theme for code blocks.
+    /// Default: "base16-ocean.dark"
     #[serde(default = "default_theme")]
     pub syntax_theme: String,
+
+    /// Optional directory containing custom .sublime-syntax files.
+    pub custom_syntax_dir: Option<PathBuf>,
 }
 
 // --- Default value providers ---

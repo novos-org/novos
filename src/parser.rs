@@ -1,7 +1,11 @@
 use crate::{config::Config, models::Post};
-use pulldown_cmark::Event;
-use pulldown_cmark::{Parser, Options, html};
+use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use std::{collections::HashMap, fs, time::SystemTime};
+
+// Syntect imports
+use syntect::highlighting::Theme;
+use syntect::html::highlighted_html_for_string;
+use syntect::parsing::SyntaxSet;
 
 /// Parses frontmatter from a file and returns a Post struct.
 pub fn parse_frontmatter(raw: &str, slug: &str, mtime: SystemTime) -> Post {
@@ -41,11 +45,64 @@ pub fn parse_frontmatter(raw: &str, slug: &str, mtime: SystemTime) -> Post {
     }
 }
 
-/// Renders Markdown string to HTML using pulldown-cmark.
-pub fn render_markdown(md: &str) -> String {
-    let mut body = String::new();
-    html::push_html(&mut body, Parser::new_ext(md, Options::all()));
-    body
+/// Renders Markdown string to HTML using pulldown-cmark and syntect for code highlighting.
+pub fn render_markdown(
+    md: &str, 
+    use_syntect: bool, 
+    ps: &SyntaxSet, 
+    theme: &Theme
+) -> String {
+    let options = Options::all();
+    let parser = Parser::new_ext(md, options);
+
+    let mut events = Vec::new();
+    let mut temp_code = String::new();
+    let mut in_code_block = false;
+    let mut current_lang = String::new();
+
+    for event in parser {
+        match event {
+            // Identify the start of a fenced code block
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(label))) if use_syntect => {
+                in_code_block = true;
+                current_lang = label.to_string();
+                temp_code.clear();
+            }
+            // Identify the end of the code block (Fixed for pulldown-cmark 0.10+)
+            Event::End(TagEnd::CodeBlock) if in_code_block => {
+                in_code_block = false;
+                
+                let syntax = ps
+                    .find_syntax_by_token(&current_lang)
+                    .unwrap_or_else(|| ps.find_syntax_plain_text());
+
+                let highlighted = highlighted_html_for_string(&temp_code, ps, syntax, theme)
+                    .unwrap_or_else(|_| {
+                        format!("<pre><code>{}</code></pre>", temp_code)
+                    });
+
+                events.push(Event::Html(highlighted.into()));
+            }
+            // Collect text if inside a code block
+            Event::Text(text) => {
+                if in_code_block {
+                    temp_code.push_str(&text);
+                } else {
+                    events.push(Event::Text(text));
+                }
+            }
+            // Pass all other events through normally
+            _ => {
+                if !in_code_block {
+                    events.push(event);
+                }
+            }
+        }
+    }
+
+    let mut html_output = String::new();
+    html::push_html(&mut html_output, events.into_iter());
+    html_output
 }
 
 /// The core engine: recursively resolves <% tags %>, handles variables, 
@@ -84,16 +141,11 @@ pub fn resolve_tags(
                 }
             } else {
                 match tag {
-                    // --- GLOBAL CONFIG TAGS ---
                     "base" => output.push_str(&config.base),
                     "base_url" => output.push_str(&config.base_url),
-                    
-                    // --- SITE METADATA TAGS (NEW) ---
                     "site_title" => output.push_str(&config.site.title),
                     "site_description" => output.push_str(&config.site.description),
                     "site_author" => output.push_str(&config.site.author),
-                    
-                    // --- POST METADATA TAGS ---
                     "posts" => output.push_str(posts_html),
                     "title" => output.push_str(&post.title),
                     "date" => output.push_str(&post.date),
@@ -105,7 +157,6 @@ pub fn resolve_tags(
                     }
                     "content" => output.push_str(body.unwrap_or(&post.raw_content)),
                     
-                    // --- DIRECTIVES (Includes & Shortcodes) ---
                     _ if tag.starts_with("include ") => {
                         let filename = tag[8..].trim();
                         let path = config.includes_dir.join(filename);
@@ -125,12 +176,10 @@ pub fn resolve_tags(
                         }
                     }
 
-                    // --- FALLBACK TO LOCAL VARIABLES ---
                     _ => {
                         if let Some(val) = vars.get(tag) {
                             output.push_str(val);
                         } else {
-                            // If tag is unrecognized, leave it as is for debugging
                             output.push_str(&rem[..end + 2]);
                         }
                     }

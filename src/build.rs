@@ -10,10 +10,14 @@ use serde_json::json;
 use std::{
     collections::HashMap,
     fs, io,
-    path::{Path, PathBuf},
+    path::{Path},
     sync::{Arc, Mutex},
     time::{Instant, SystemTime},
 };
+
+// Syntect imports for the build engine
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
 
 /// Recursively copies all files from the source directory to the destination.
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
@@ -87,6 +91,13 @@ pub fn perform_build(
     let lr = *last_run_mu.lock().unwrap();
 
     println!("novos build v{}", env!("CARGO_PKG_VERSION"));
+
+    // Pre-load Syntax Highlighting Assets
+    let ps = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let theme = ts.themes.get(&config.build.syntax_theme)
+        .or_else(|| ts.themes.get("base16-ocean.dark"))
+        .expect("Failed to load syntax theme");
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
@@ -166,7 +177,8 @@ pub fn perform_build(
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
             let mut vars = HashMap::new();
-            let body = parser::render_markdown(&p.raw_content);
+            // FIXED: Passing syntect arguments and use_syntect flag
+            let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, theme);
             let layout = parser::resolve_tags(&view_tpl, config, &posts_html, p, Some(&body), 0, &mut vars);
             let final_h = parser::resolve_tags(&main_tpl, config, &posts_html, p, Some(&layout), 0, &mut vars);
             fs::write(dest, final_h).ok();
@@ -238,7 +250,9 @@ pub fn perform_build(
     fs::write(config.output_dir.join("index.html"), index_page)?;
 
     // Update last run time
-    *last_run_mu.lock().unwrap() = SystemTime::now();
+    if let Ok(mut lr_lock) = last_run_mu.lock() {
+        *lr_lock = SystemTime::now();
+    }
     
     println!("\x1b[36msuccess\x1b[0m build complete.");
     println!("Done in {:.2}s.", start.elapsed().as_secs_f32());
