@@ -1,0 +1,29 @@
+.wrapper {
+  width: 860px;
+  margin: 0 auto;
+  position: relative;
+  max-width: 860px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+section {
+  width: 500px;
+  float: right;
+  margin-left: 360px;
+  padding-bottom: 50px;
+  max-width: 100%;
+}
+
+@supports (display: grid) {
+  .wrapper {
+    display: grid;
+    grid-template-columns: 270px 1fr;
+    gap: 30px;
+  }
+  section {
+    float: none;
+    margin: 0;
+    width: auto;
+  }
+}

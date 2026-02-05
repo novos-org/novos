@@ -1,0 +1,68 @@
+/* --- TABLET & SMALL LAPTOPS (<= 900px) --- */
+@media (max-width: 900px) {
+  .wrapper { max-width: 100%; }
+  section { float: none; width: auto; margin-left: 0; }
+  footer { position: static; float: none; width: auto; margin: 30px 0; bottom: auto; }
+  header ul { width: 100%; }
+
+  .menu-toggle { display: flex; align-items: center; justify-content: center; }
+  .nav-links {
+    display: none;
+    &.is-active {
+      display: flex; flex-direction: column;
+      position: absolute; top: 70px; right: 16px; width: 200px;
+      @include glass-panel; padding: 16px; border-radius: 12px;
+      z-index: 100; animation: fadeIn 0.2s ease-out;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+  }
+}
+
+/* --- PHONES (<= 600px) --- */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  header ul { flex-direction: column; height: auto; }
+  header li { height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+  header li:last-child { border-bottom: 0; }
+  header ul a { height: auto; padding: 10px 0; }
+  button, .button-primary { width: 100%; padding: 12px 16px; }
+  pre { font-size: 12px; }
+
+  .search-area {
+    position: relative; right: 0; margin-bottom: 20px; width: 100%;
+    #search-input { width: 100%; }
+    .results-dropdown { width: 100%; position: relative; top: 10px; }
+  }
+}
+
+/* --- VERY SMALL / WEIRD CLIENTS (<= 400px) --- */
+@media (max-width: 400px) {
+  .wrapper { padding-left: 10px; padding-right: 10px; }
+  h1 { font-size: 1.4em; }
+  h2 { font-size: 1.2em; }
+  h3 { font-size: 1.1em; }
+}
+
+/* --- LARGE DESKTOPS (>= 1400px) --- */
+@media (min-width: 1400px) {
+  .wrapper { max-width: 1100px; }
+  section { max-width: 720px; }
+  footer { width: 300px; font-size: 17px; }
+  body { font-size: 18px; }
+
+  @supports (display: grid) {
+    .wrapper { grid-template-columns: 320px 1fr; gap: 40px; }
+  }
+}
+
+/* --- ULTRA-WIDE / 4K MONITORS (>= 1800px) --- */
+@media (min-width: 1800px) {
+  .wrapper { max-width: 1280px; }
+  section { max-width: 800px; }
+  body { font-size: 19px; line-height: 1.6; }
+  pre { font-size: 14px; }
+
+  @supports (display: grid) {
+    .wrapper { grid-template-columns: 360px 1fr; gap: 50px; }
+  }
+}

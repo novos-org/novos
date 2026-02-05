@@ -1,0 +1,102 @@
+ .menu-toggle {
+
+  display: none; // Hidden on desktop
+
+  @include glass-panel;
+
+  width: 75px;
+
+  height: 75px;
+
+  border-radius: 8px;
+
+  padding: 6px;
+
+  cursor: pointer;
+
+  flex-shrink: 0;
+
+  
+
+  .icon-logo {
+
+    width: 100%;
+
+    height: 100%;
+
+    background-color: var(--primary);
+
+    -webkit-mask: url('../favicon.svg') no-repeat center;
+
+    mask: url('../favicon.svg') no-repeat center;
+
+    -webkit-mask-size: contain;
+
+    mask-size: contain;
+
+  }
+
+
+  &:hover {
+
+    background-color: var(--primary);
+
+    .icon-logo { background-color: #000; }
+
+  }
+
+}
+
+
+
+ .search-area {
+  position: absolute;
+  top: 0; right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  z-index: 1000;
+
+  #search-input {
+    width: 36px; height: 36px;
+    padding: 0 10px;
+    @include glass-panel;
+    border-radius: 8px;
+    color: var(--text-main);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s;
+    outline: none;
+    cursor: pointer;
+
+    &::placeholder { color: transparent; }
+    &:focus {
+      width: 240px;
+      cursor: text;
+      background-color: var(--input-bg);
+      border-color: var(--primary);
+      &::placeholder { color: var(--text-muted); }
+    }
+  }
+
+  .results-dropdown {
+    @include glass-panel;
+    position: absolute;
+    top: 45px; width: 320px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: none;
+    max-height: 70vh;
+    overflow-y: auto;
+
+    .search-entry {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+      &:hover { background: rgba(255, 255, 255, 0.05); }
+      &:last-child { border-bottom: none; }
+      
+      a { color: var(--text-headers); font-weight: 600; font-size: 15px; display: block; margin-bottom: 4px; }
+      small { color: var(--text-muted); font-size: 12px; display: block; }
+      p { margin: 5px 0 0; font-size: 13px; line-height: 1.4; color: var(--text-main); opacity: 0.8; }
+    }
+  }
+}

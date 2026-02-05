@@ -29,6 +29,10 @@
 | **Tier 2** | Arch Linux | Verified compatibility |
 | **Tier 2** | Void Linux | Verified compatibility |
 
+## Themes
+(we currently have one theme, more coming soon!)
+- Solarnight (sass/solarnight.scss)
+
 ## Backend
 - **Language:** Rust (2024 Edition)
 - **Markdown:** `pulldown-cmark` (CommonMark compliant, yay!)
