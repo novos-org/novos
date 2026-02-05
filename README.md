@@ -1,15 +1,20 @@
 <div align="center">
 
-# novos
+# **novos**
 <img src="./assets/icon.png" alt="novos logo" width="250" height="250">
 
-<small> Build at the speed of thought.</small>
+**Build at the speed of thought.**
 
+
+![License](https://img.shields.io/badge/license-3--Clause%20BSD-blue)
+![Rust](https://img.shields.io/badge/rust-2024%20edition-orange)
 </div>
 
 > [!WARNING]
-> This is currently beta software.
+> **novos** is currently beta software. Expect frequent updates and potential breaking changes as we approach v1.0.
 
+## What is novos?
+novos is a lightning-fast static site generator (SSG) built in Rust. It takes your Markdown files and turns them into a website in milliseconds.
 
 ## Features
 - **Sass transpilation** via native `grass` (no C++ or Node.js required)
@@ -30,6 +35,12 @@
 | **Tier 2** | Arch Linux | Verified compatibility |
 | **Tier 2** | Void Linux | Verified compatibility |
 
+## Roadmap
+- [x] Parallel page generation
+- [ ] Live reload inside dev server
+- [ ] Theme: Nord-ish
+- [ ] Plugin API (WASM)
+
 ## Themes
 (we currently have one theme, more coming soon!)
 - Solarnight (sass/solarnight.scss)
@@ -49,7 +60,7 @@ Documentation is available at [docs/](./docs)
 
 ### In text form
 
-```text
+```bash
 ~/dev/stress/sitez $ hyperfine --warmup 3 "zola build"
 Benchmark 1: zola build
   Time (mean ± σ):      4.874 s ±  0.014 s    [User: 3.949 s, System: 1.354 s]
@@ -64,11 +75,11 @@ Benchmark 1: hugo
   Range (min … max):    1.910 s …  1.966 s    10 runs
 ```
 
-### In a Pie chart
-
+### In a bar chart
 ```mermaid
-pie title Build Time Comparison
-    "Zola (4.87s)" : 4.87
-    "Hugo (1.93s)" : 1.93
-    "novos (0.68s)" : 0.68
+xychart-beta
+    title "Build Time (seconds) - Lower is Better"
+    x-axis [Zola, Hugo, novos]
+    y-axis "Time (s)" 0 --> 5
+    bar [4.87, 1.93, 0.68]
 ```
