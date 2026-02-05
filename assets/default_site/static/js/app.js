@@ -52,3 +52,71 @@ document.querySelectorAll('pre').forEach((block) => {
     }
   });
 });
+
+const searchInput = document.getElementById('search-input');
+const resultsContainer = document.getElementById('search-results');
+let searchIndex = [];
+
+// 1. Load the search index from your .build directory
+async function initSearch() {
+  try {
+    const response = await fetch('/search.json');
+    searchIndex = await response.json();
+  } catch (err) {
+    console.error("Novos: Could not load search index.");
+  }
+}
+
+// 2. The Search Logic
+function performSearch(query) {
+  const q = query.toLowerCase().trim();
+  
+  if (!q) {
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  const matches = searchIndex.filter(post => {
+    return post.title.toLowerCase().includes(q) || 
+           post.tags.some(t => t.toLowerCase().includes(q)) ||
+           post.snippet.toLowerCase().includes(q);
+  });
+
+  renderResults(matches);
+}
+
+// 3. Render the Glassmorphism Entries
+function renderResults(results) {
+  if (results.length === 0) {
+    resultsContainer.innerHTML = '<div class="search-entry"><small>No results found.</small></div>';
+  } else {
+    resultsContainer.innerHTML = results.map(post => `
+      <div class="search-entry">
+        <a href="/${post.slug}">${post.title}</a>
+        <small>${post.date} • ${post.tags.join(', ')}</small>
+        <p>${post.snippet.substring(0, 80)}...</p>
+      </div>
+    `).join('');
+  }
+  resultsContainer.style.display = 'block';
+}
+
+// 4. UX Helpers
+// Close when clicking outside
+document.addEventListener('click', (e) => {
+  if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+    resultsContainer.style.display = 'none';
+  }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === "Escape") {
+    resultsContainer.style.display = 'none';
+    searchInput.blur();
+  }
+});
+
+// Run
+searchInput?.addEventListener('input', e => performSearch(e.target.value));
+initSearch();
