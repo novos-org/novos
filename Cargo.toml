@@ -19,7 +19,7 @@ panic = 'abort'        # Remove stack unwinding (shrinks binary, slight speed bo
 strip = true           # Automatically strip symbols (smaller binary)
 
 [dependencies]
-pulldown-cmark = "0.10"
+pulldown-cmark = "0.13.0"
 rayon = "1.8"
 notify = "6.1"
 clap = { version = "4.4", features = ["derive"] }
