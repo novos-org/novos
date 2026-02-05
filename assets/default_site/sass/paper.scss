@@ -1,0 +1,37 @@
+// paper.scss
+@import "core";
+
+:root {
+  /* High-contrast Paper Palette */
+  --bg-body: #f4f1ea;        // Slightly aged paper color
+  --bg-top: #f4f1ea;
+  --bg-bottom: #e8e4d8;
+  
+  --text-main: #1a1a1a;
+  --text-headers: #000000;
+  --text-muted: #5f5f5f;
+  
+  --primary: #000000;        // Ink black
+  --primary-hover: #444444;
+  
+  --glass-bg: #ffffff;       // No transparency
+  --glass-border: #000000;   // Solid ink borders
+  --border: #000000;
+  --bg-pre: #ffffff;
+  --input-bg: #ffffff;
+  
+  --blur-amount: 0px;        // Kill the blur for performance and style
+}
+
+/* Overwrite the Glass Mixin for a flat look */
+header ul, footer, pre, .results-dropdown, .copy-code-button {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 2px solid #000 !important; // Thick brutalist borders
+  box-shadow: 4px 4px 0px #000 !important; // Hard "Pop" shadow
+}
+
+/* Typography Overwrite */
+body {
+  font-family: "Ionee", "Georgia", serif; // Serifs feel like a book
+}
