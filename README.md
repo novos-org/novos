@@ -14,7 +14,6 @@
 ## Features
 - **Sass transpilation** via native `grass` (no C++ or Node.js required)
 - **Fast Parallelism** utilizing `Rayon` for multi-core page generation
-- **Live Reloading** with non-blocking `notify` event monitoring
 - **Self-Contained** binary with embedded assets via `rust-embed`
 - **Shortcodes, Includes, & Variables** for flexible templating
 - **RSS** generation baked-in
