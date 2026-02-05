@@ -34,6 +34,11 @@
 (we currently have one theme, more coming soon!)
 - Solarnight (sass/solarnight.scss)
 
+## Documentation
+Documentation is available at [docs/](./docs)
+- [**Get Started**](./docs/SETUP.md): Setup guide for novos
+- [**Installation**](./docs/INSTALL.md): Install guide for novos
+
 ## Backend
 - **Language:** Rust (2024 Edition)
 - **Markdown:** `pulldown-cmark` (CommonMark compliant, yay!)
