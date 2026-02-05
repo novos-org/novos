@@ -7,16 +7,28 @@ To make a site, use `novos init`.
 Setup process:
 ```sh
 mkdir site && cd site && novos init
-# you can also clone the novos documentation site: git clone https://github.com/novos-org/website.git
-# and, you might want to clone xer's site for a blog example: git clone https://github.com/xerrkk/srclo.net.git
 ```
 
-The default directory structure is
-```text
-├── novos.toml # config
-├── pages # static HTML pages (e.x., blog.html, privacy.html)
-├── sass # SASS stylesheets
-├── posts # markup posts (e.x., docs, blog, etc)
-├── static  # static content (e.x., javascript, images)
-└── includes # templates, shortcodes, partials
+# Learning by Example
+If you prefer to start with a working template, you can clone the official documentation or a live production site:
+- Official Website: `git clone https://github.com/novos-org/website.git`
+- Production Blog (xer): `git clone https://github.com/xerrkk/srclo.net.git`
+
+# Directory Structure
+A novos project is designed to be flat and transparent. No hidden magic—just files where you expect them:
+
+| File/Folder | Purpose |
+|---|---|
+| novos.toml | The brain of your site. Configure your title, URL, and RSS settings here. |
+| pages/  | Static HTML files for high-level structure (e.g., `index.html`, `about.html`). |
+| posts/ |  Where your Markdown lives. These are processed by pulldown-cmark. |
+|  sass/ |  `.scss` files. Compiled natively via grass without needing Node.js. |
+| static/ | Pass-through assets like images, fonts, and client-side JavaScript.|
+| includes/ | Reusable snippets, shortcodes, and templating logic. |
+
+# Development Workflow
+Once your site is initialized, you can use the built-in development server to preview changes in real-time:
+```sh
+# Build the site and start a local server
+novos serve
 ```
