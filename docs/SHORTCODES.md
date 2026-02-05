@@ -2,7 +2,7 @@
 
 Shortcodes live in includes/shortcodes/*.html
 
-They are invoked by `<% .<name> <args> %>`
+They are invoked by `<% .<name> <args> %>`.
 
 Example shortcode:
 
@@ -17,3 +17,4 @@ Example shortcode:
     </iframe>
 </div>
 ```
+Inside a shortcode, the arguments are available as <%= a<arg.num> =%>.
