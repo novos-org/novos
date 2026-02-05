@@ -13,7 +13,7 @@ Shortcodes use a dot-prefix to distinguish them from standard variables or inclu
 ```
 
 > [!TIP]
-> Arguments with spaces: Wrap them in double quotes. Simple arguments: Quotes are optional if there are no spaces (e.g., `<% .youtube dQw4w9WgXcQ` %>).
+> Arguments with spaces: Wrap them in double quotes. Simple arguments: Quotes are optional if there are no spaces (e.g., `<% .youtube dQw4w9WgXcQ %>`).
 
 # Internal Logic
 Inside the .html file, arguments are accessed via indexed variables starting at 1.
