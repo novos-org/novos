@@ -1,9 +1,9 @@
 [package]
 name = "novos"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["xer <xer@srclo.net>"]
-description = "A self-contained, high-performance SSG for systems thinkers."
+description = "Build at the speed of thought - a self-contained, high-performance SSG"
 readme = "README.md"
 repository = "https://github.com/novos-org/novos"
 license = "BSD-3-Clause"
