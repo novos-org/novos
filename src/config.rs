@@ -19,6 +19,10 @@ pub struct Config {
     #[serde(default = "default_posts")] 
     pub posts_dir: PathBuf,
 
+    /// Sub-directory within the output folder where posts will be rendered. Default: `""` (root)
+    #[serde(default = "default_posts_outdir")]
+    pub posts_outdir: String,
+
     /// Directory containing static page Markdown files. Default: `./pages`
     #[serde(default = "default_pages")] 
     pub pages_dir: PathBuf,
@@ -109,6 +113,7 @@ pub struct BuildSettings {
 // --- Default value providers ---
 
 fn default_posts() -> PathBuf { PathBuf::from("./posts") }
+fn default_posts_outdir() -> String { "".to_string() }
 fn default_pages() -> PathBuf { PathBuf::from("./pages") }
 fn default_output() -> PathBuf { PathBuf::from("./.build") }
 fn default_template() -> PathBuf { PathBuf::from("./index.html") }
@@ -117,7 +122,7 @@ fn default_static() -> PathBuf { PathBuf::from("./static") }
 fn default_view() -> PathBuf { PathBuf::from("./includes/view_template.html") }
 fn default_url() -> String { "https://example.com".to_string() }
 fn default_base() -> String { "".to_string() }
-fn default_title() -> String { "A Novos Site".to_string() }
+fn default_title() -> String { "a novos site".to_string() }
 fn default_sass_style() -> String { "expanded".to_string() }
 fn default_theme() -> String { "base16-ocean.dark".to_string() }
 

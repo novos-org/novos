@@ -6,6 +6,7 @@ posts_dir   = "./posts"
 pages_dir   = "./pages"
 static_dir  = "./static"
 output_dir  = "./.build"
+posts_outdir = "posts/"
 
 template_path      = "./index.html"
 includes_dir       = "./includes"

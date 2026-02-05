@@ -86,7 +86,7 @@ pub fn perform_build(
     let start = Instant::now();
     let lr = *last_run_mu.lock().unwrap();
 
-    println!("Novos build v{}", env!("CARGO_PKG_VERSION"));
+    println!("novos build v{}", env!("CARGO_PKG_VERSION"));
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
@@ -99,6 +99,10 @@ pub fn perform_build(
     }
     
     fs::create_dir_all(&config.output_dir)?;
+
+    // Ensure the posts output directory exists
+    let posts_out_path = config.output_dir.join(&config.posts_outdir);
+    fs::create_dir_all(&posts_out_path)?;
 
     if config.static_dir.exists() {
         if verbose {
@@ -138,12 +142,18 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
-    // Generate Global Post List
+    // Generate Global Post List with correct sub-directory links
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
+        let link_path = if config.posts_outdir.is_empty() {
+            format!("{}{}.html", config.base, p.slug)
+        } else {
+            format!("{}{}/{}.html", config.base, config.posts_outdir, p.slug)
+        };
+
         posts_html.push_str(&format!(
-            "  <li>{} - <a href='{}{}'>{}</a></li>\n",
-            p.date, config.base, p.slug, p.title
+            "  <li>{} - <a href='{}'>{}</a></li>\n",
+            p.date, link_path, p.title
         ));
     }
     posts_html.push_str("</ul>");
@@ -151,9 +161,9 @@ pub fn perform_build(
     // Step 4: Rendering and Metadata
     println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
 
-    // Parallel render posts
+    // Parallel render posts into the specific posts_outdir
     posts.par_iter().for_each(|p| {
-        let dest = config.output_dir.join(format!("{}.html", p.slug));
+        let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
             let mut vars = HashMap::new();
             let body = parser::render_markdown(&p.raw_content);
@@ -230,7 +240,7 @@ pub fn perform_build(
     // Update last run time
     *last_run_mu.lock().unwrap() = SystemTime::now();
     
-    println!("\x1b[36msuccess\x1b[0m Build complete.");
+    println!("\x1b[36msuccess\x1b[0m build complete.");
     println!("Done in {:.2}s.", start.elapsed().as_secs_f32());
     Ok(())
 }

@@ -12,10 +12,10 @@ window.toggleTheme = () => {
 const initTheme = () => {
     const savedTheme = localStorage.getItem(THEME_KEY);
     if (savedTheme) {
-        applyTheme(savedTheme);
+	applyTheme(savedTheme);
     }
     else if (window.matchMedia && window.matchMedia(DARK_QUERY).matches) {
-        applyTheme('dark');
+	applyTheme('dark');
     }
 };
 initTheme();
@@ -92,7 +92,7 @@ function renderResults(results) {
   } else {
     resultsContainer.innerHTML = results.map(post => `
       <div class="search-entry">
-        <a href="/${post.slug}">${post.title}</a>
+        <a href="/posts/${post.slug}">${post.title}</a>
         <small>${post.date} • ${post.tags.join(', ')}</small>
         <p>${post.snippet.substring(0, 80)}...</p>
       </div>
