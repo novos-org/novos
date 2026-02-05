@@ -21,26 +21,12 @@
         <li><a href="<% base %>/blog">blog</a></li>
       </ul>
 
-      <div class="flex items-center gap-4">
-        <div class="search-area">
-          <input
-            type="text"
-            id="search-input"
-            placeholder="Search posts..."
-            autocomplete="off"
-            aria-label="Search"
-          >
-          <div id="search-results" class="results-dropdown"></div>
-        </div>
-
+      <% .themetoggle %>
+      <% .search %>
         <button class="menu-toggle" aria-label="Toggle Menu" aria-expanded="false">
           <div class="icon-logo"></div>
         </button>
       </div>
-
     </div>
-  <button onclick="toggleTheme()">
-          Toggle Dark Mode
-  </button>
-  </nav>
+</nav>
     </header>
