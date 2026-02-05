@@ -1,33 +1,43 @@
 #!/usr/bin/env bash
 
-# Configuration
-DEST_DIR="../novossite/posts"
+DEST_DIR="../stress/novos"
 COUNT=10000
 
-# Create directory if it doesn't exist
 mkdir -p "$DEST_DIR"
 
-echo "Generating $COUNT dummy posts for novos..."
+echo "Generating $COUNT high-stress dummy posts for novos..."
+
+# Array of random tags to pull from
+TAGS=("rust" "bsd" "omnios" "performance" "spite" "fast" "minimal" "systems")
 
 for i in $(seq 1 $COUNT); do
-  cat <<EOF > "$DEST_DIR/post-$i.md"
----
-title: "Stress Test Post $i"
-date: 2026-02-03
-tags: ["test", "lorem"]
----
+    # Randomize date within the last year
+    DAY=$((1 + $RANDOM % 28))
+    MONTH=$((1 + $RANDOM % 12))
+    
+    # Randomize tags (pick 2 random ones)
+    T1=${TAGS[$RANDOM % ${#TAGS[@]}]}
+    T2=${TAGS[$RANDOM % ${#TAGS[@]}]}
+    
+    # Randomize body size (between 5 and 50 paragraphs of filler)
+    BODY_SIZE=$((5 + $RANDOM % 45))
 
-## Section for Post $i
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-
-* Item one
-* Item two
-* Item three
-
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-EOF
+    {
+        echo "---"
+        echo "title: \"Stress Test: $(fortune -s 2>/dev/null || echo "Post $i")\""
+        echo "date: 2026-$(printf "%02d" $MONTH)-$(printf "%02d" $DAY)"
+        echo "tags: [\"$T1\", \"$T2\"]"
+        echo "---"
+        echo ""
+        echo "## Random Header #$i"
+        
+        # Generate varied body content
+        for j in $(seq 1 $BODY_SIZE); do
+            echo "This is paragraph $j of a randomized stress test. Novos needs to parse this efficiently."
+            echo "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt."
+        done
+        
+    } > "$DEST_DIR/post-$i.md"
 done
 
-echo "finish!"
+echo "Done! 10k chaotic files generated."
