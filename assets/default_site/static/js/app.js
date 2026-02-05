@@ -120,3 +120,18 @@ document.addEventListener('keydown', (e) => {
 // Run
 searchInput?.addEventListener('input', e => performSearch(e.target.value));
 initSearch();
+
+document.addEventListener('keydown', (e) => {
+  // 1. Check if the pressed key is '/'
+  // 2. Ensure the user isn't already typing in an input/textarea/contentEditable
+  if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
+    
+    // Prevent the '/' character from actually being typed into the search bar
+    e.preventDefault(); 
+    
+    searchInput.focus();
+    
+    // Optional: Scroll to top if your search bar is at the top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
