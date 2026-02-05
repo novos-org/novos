@@ -12,10 +12,10 @@ window.toggleTheme = () => {
 const initTheme = () => {
     const savedTheme = localStorage.getItem(THEME_KEY);
     if (savedTheme) {
-	applyTheme(savedTheme);
+        applyTheme(savedTheme);
     }
     else if (window.matchMedia && window.matchMedia(DARK_QUERY).matches) {
-	applyTheme('dark');
+        applyTheme('dark');
     }
 };
 initTheme();
@@ -92,7 +92,7 @@ function renderResults(results) {
   } else {
     resultsContainer.innerHTML = results.map(post => `
       <div class="search-entry">
-        <a href="/posts/${post.slug}">${post.title}</a>
+        <a href="/doc/${post.slug}">${post.title}</a>
         <small>${post.date} • ${post.tags.join(', ')}</small>
         <p>${post.snippet.substring(0, 80)}...</p>
       </div>
@@ -133,5 +133,38 @@ document.addEventListener('keydown', (e) => {
     
     // Optional: Scroll to top if your search bar is at the top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const menuBtn = document.querySelector('.menu-toggle');
+  const navLinks = document.querySelector('.nav-links');
+
+  if (menuBtn && navLinks) {
+    // 1. Toggle Menu
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = menuBtn.getAttribute('aria-expanded') === 'true';
+      
+      menuBtn.setAttribute('aria-expanded', !isExpanded);
+      navLinks.classList.toggle('is-active');
+    });
+
+    // 2. Click Outside to Close
+    document.addEventListener('click', (e) => {
+      if (navLinks.classList.contains('is-active') && !navLinks.contains(e.target) && !menuBtn.contains(e.target)) {
+        navLinks.classList.remove('is-active');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // 3. Close on Escape Key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && navLinks.classList.contains('is-active')) {
+        navLinks.classList.remove('is-active');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
   }
 });

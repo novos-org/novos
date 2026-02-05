@@ -536,13 +536,12 @@ pre {
     top: 8px;
     right: 8px;
     
-    // Applying your theme mixin & variables
     @include glass-panel;
     padding: 4px 10px;
+    text-transform: lowercase;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
-    text-transform: lowercase;
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -668,6 +667,92 @@ pre {
       width: 100%;
       position: relative;
       top: 10px;
+    }
+  }
+}
+
+/* --- HEADER & NAVIGATION --- */
+header {
+  nav {
+    .wrapper {
+      display: flex;
+      align-items: center;
+      border-radius: 15px;
+      justify-content: space-between;
+    }
+  }
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+
+  a {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--primary);
+    }
+  }
+}
+
+/* --- THE HAMBURGER (FAVICON) --- */
+.menu-toggle {
+  display: none; // Hidden on desktop
+  @include glass-panel;
+  width: 75px;
+  height: 75px;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  
+  .icon-logo {
+    width: 100%;
+    height: 100%;
+    background-color: var(--primary);
+    -webkit-mask: url('../favicon.svg') no-repeat center;
+    mask: url('../favicon.svg') no-repeat center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+
+  &:hover {
+    background-color: var(--primary);
+    .icon-logo { background-color: #000; }
+  }
+}
+
+/* --- RESPONSIVE LOGIC (<= 900px) --- */
+@media (max-width: 900px) {
+  .menu-toggle {
+    display: flex; // Show on mobile
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-links {
+    display: none; // Hidden by default
+    
+    &.is-active {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 70px;
+      right: 16px;
+      width: 200px;
+      @include glass-panel;
+      padding: 16px;
+      border-radius: 12px;
+      z-index: 100;
+      animation: fadeIn 0.2s ease-out;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
   }
 }
