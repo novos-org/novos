@@ -1,4 +1,5 @@
 use crate::{config::Config, models::Post};
+use pulldown_cmark::Event;
 use pulldown_cmark::{Parser, Options, html};
 use std::{collections::HashMap, fs, time::SystemTime};
 
@@ -144,4 +145,21 @@ fn render_shortcode(template: &str, args: &[String]) -> String {
         rendered = rendered.replace(&placeholder, arg);
     }
     rendered
+}
+
+
+pub fn strip_markdown(md: &str) -> String {
+    let parser = Parser::new(md);
+    let mut plain_text = String::new();
+
+    for event in parser {
+        match event {
+            Event::Text(text) | Event::Code(text) => {
+                plain_text.push_str(&text);
+                plain_text.push(' '); // Prevent words from clumping together
+            }
+            _ => {}
+        }
+    }
+    plain_text.trim().to_string()
 }
