@@ -18,6 +18,7 @@
 - **Shortcodes, Includes, & Variables** for flexible templating
 - **RSS** generation baked-in
 - **search.json**, so you can search
+- **syntect**, because who hates colors?
 
 ## Supported OSes
 
