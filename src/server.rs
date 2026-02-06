@@ -63,7 +63,6 @@ pub fn serve(
             "json" => "application/json",
             "xml"  => "application/xml",
             "png"  => "image/png",
-	    "svg"  => "image/svg+xml",
             "jpg" | "jpeg" => "image/jpeg",
             "svg"  => "image/svg+xml",
             "txt"  => "text/plain",

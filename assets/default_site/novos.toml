@@ -22,7 +22,8 @@ generate_search = true
 # If true, wipes the .build folder every time (recommended for prod)
 clean_output = true
 
-syntax_theme = "InspiredGitHub"
+# syntax_theme = "InspiredGitHub"
+syntax_theme_path = "static/themes/solarnight.tmTheme"
 use_syntect = true
 # Options: "expanded" or "compressed"
 sass_style = "compressed"

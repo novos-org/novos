@@ -1,33 +1,41 @@
-/* --- 1. THEME ENGINE (Glassmorphism) --- */
+/* --- 1. THEME ENGINE (Rosé Pine / Glassmorphism) --- */
 @mixin dark-colors {
-  --bg-top: #191821;
-  --bg-bottom: #0e0c15;
-  --bg-body: #0e0c15; 
-  --glass-bg: rgba(25, 24, 33, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --bg-alt: rgba(30, 28, 40, 0.5);
-  --bg-pre: #12111a;
-  --text-main: #f0fffe;
-  --text-headers: #ffffff;
-  --text-muted: #6b6a80;
-  --primary: #cffdff;
-  --primary-hover: #ffffff;
-  --border: rgba(255, 255, 255, 0.1);
-  --input-bg: rgba(15, 14, 22, 0.6);
+  /* Rosé Pine Base Palette */
+  --bg-top: #191724;       /* base */
+  --bg-bottom: #1f1d2e;    /* surface */
+  --bg-body: #191724;      
+  
+  --glass-bg: rgba(25, 23, 36, 0.75); /* base with alpha */
+  --glass-border: rgba(110, 106, 134, 0.2); /* muted/overlay */
+  
+  --bg-alt: #1f1d2e;       /* surface */
+  --bg-pre: #1f1d2e;       /* code block background */
+  
+  /* Text and Accents */
+  --text-main: #e0def4;    /* text */
+  --text-headers: #e0def4; /* text */
+  --text-muted: #908caa;   /* subdued */
+  
+  --primary: #ebbcba;      /* rose (accent) */
+  --primary-hover: #f6c177; /* gold (highlight) */
+  
+  --border: #26233a;       /* highlight low */
+  --input-bg: rgba(31, 29, 46, 0.6); /* surface */
 }
 
 :root {
-  --bg-body: #e0e0e0;
+  /* Light Mode Fallback (Rosé Pine Dawn vibe) */
+  --bg-body: #faf4ed;
   --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --bg-alt: rgba(244, 244, 244, 0.6);
-  --bg-pre: rgba(249, 249, 249, 0.6);
-  --text-main: #333333;
-  --text-headers: #111111;
-  --text-muted: #777777;
-  --primary: #3399cc;
-  --primary-hover: #2980b9;
-  --border: rgba(0, 0, 0, 0.1);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --bg-alt: #fffaf3;
+  --bg-pre: #f2e9e1;
+  --text-main: #575279;
+  --text-headers: #575279;
+  --text-muted: #9893a5;
+  --primary: #d7827e;
+  --primary-hover: #286983;
+  --border: rgba(0, 0, 0, 0.05);
   --input-bg: rgba(255, 255, 255, 0.5);
   --blur-amount: 12px;
 

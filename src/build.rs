@@ -94,10 +94,22 @@ pub fn perform_build(
 
     // Pre-load Syntax Highlighting Assets
     let ps = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let theme = ts.themes.get(&config.build.syntax_theme)
-        .or_else(|| ts.themes.get("base16-ocean.dark"))
-        .expect("Failed to load syntax theme");
+    
+    // LOAD THEME: Logic for custom .tmTheme vs defaults
+    let theme = if let Some(ref custom_path) = config.build.syntax_theme_path {
+        if verbose { println!("\x1b[2m  loading custom theme\x1b[0m {:?}", custom_path); }
+        let theme_data = fs::read_to_string(custom_path)
+            .map_err(|e| io::Error::new(io::ErrorKind::NotFound, format!("Theme file not found: {}", e)))?;
+        let mut cursor = io::Cursor::new(theme_data);
+        syntect::highlighting::ThemeSet::load_from_reader(&mut cursor)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse .tmTheme"))?
+    } else {
+        // Fallback to internal syntect themes
+        let ts = ThemeSet::load_defaults();
+        ts.themes.get(&config.build.syntax_theme)
+            .cloned()
+            .unwrap_or_else(|| ts.themes.get("base16-ocean.dark").unwrap().clone())
+    };
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
@@ -153,7 +165,7 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
-    // Generate Global Post List with correct sub-directory links
+    // Generate Global Post List
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
         let link_path = if config.posts_outdir.is_empty() {
@@ -172,13 +184,13 @@ pub fn perform_build(
     // Step 4: Rendering and Metadata
     println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
 
-    // Parallel render posts into the specific posts_outdir
+    // Parallel render posts
     posts.par_iter().for_each(|p| {
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
             let mut vars = HashMap::new();
-            // FIXED: Passing syntect arguments and use_syntect flag
-            let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, theme);
+            // Passing the &theme reference to the parser
+            let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
             let layout = parser::resolve_tags(&view_tpl, config, &posts_html, p, Some(&body), 0, &mut vars);
             let final_h = parser::resolve_tags(&main_tpl, config, &posts_html, p, Some(&layout), 0, &mut vars);
             fs::write(dest, final_h).ok();

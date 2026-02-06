@@ -113,8 +113,9 @@ pub struct BuildSettings {
     /// Default: "base16-ocean.dark"
     #[serde(default = "default_theme")]
     pub syntax_theme: String,
+    pub syntax_theme_path: Option<String>,
 
-    /// Optional directory containing custom .sublime-syntax files.
+/// Optional directory containing custom .sublime-syntax files.
     pub custom_syntax_dir: Option<PathBuf>,
 }
 

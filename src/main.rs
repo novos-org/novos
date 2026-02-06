@@ -30,6 +30,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
+use syntect::highlighting::Theme;
+use std::io::Cursor;
+use syntect::highlighting::ThemeSet;
+ 
+
+pub fn load_custom_theme(path: &std::path::Path) -> Theme {
+    let theme_file = fs::read_to_string(path)
+        .expect("Failed to read .tmTheme file");
+    let mut cursor = Cursor::new(theme_file);
+    ThemeSet::load_from_reader(&mut cursor)
+        .expect("Failed to parse .tmTheme")
+}
 
 /// Assets for the default site template, embedded into the binary.
 #[derive(RustEmbed)]
