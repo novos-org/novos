@@ -6,7 +6,7 @@
 **Build at the speed of thought.**
 
 
-![License](https://img.shields.io/badge/license-3--Clause%20BSD-blue)
+![License](https://img.shields.io/github/license/novos-org/novos)
 ![Rust](https://img.shields.io/badge/rust-2024%20edition-orange)
 </div>
 
@@ -24,6 +24,7 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 - **RSS** generation baked-in
 - **search.json**, so you can search
 - **syntect**, because who hates colors?
+- [**Tera**](https://keats.github.io/terasample), because who loves repeating themselves?
 
 ## Supported OSes
 
