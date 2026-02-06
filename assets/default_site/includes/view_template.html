@@ -1,14 +1,14 @@
-<% set title = blog post %>
+{% set title = blog post %}
 
 <div class="post-header">
-    <h1><% title %></h1>
-    <div class="meta"><em>Published on: <% date %></em></div>
-    <div class="tags-list"><em>Tags: <% tags %></em></div>
+    <h1>{% title %}</h1>
+    <div class="meta"><em>Published on: {% date %}</em></div>
+    <div class="tags-list"><em>Tags: {% tags %}</em></div>
 </div>
 <hr>
 <main class="container">
     <div class="card">
-      <% content %>
+      {% content %}
     </div>
     <br>
     <div style="text-align: center;">

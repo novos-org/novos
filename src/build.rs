@@ -252,7 +252,7 @@ pub fn perform_build(
         title: config.site.title.clone(),
         date: "".to_string(),
         tags: vec![],
-        raw_content: "<% include home.html %>".to_string(),
+        raw_content: "{% include home.html %}".to_string(),
         mtime: SystemTime::now(),
     };
     
