@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["xer <xer@srclo.net>"]
 description = "Build at the speed of thought - a self-contained, high-performance SSG"
 readme = "README.md"
+homepage = "https://novos.sh"
 repository = "https://github.com/novos-org/novos"
 license = "Apache-2.0 OR MIT"
 keywords = ["ssg", "static-site", "sass", "fast", "freebsd"]
