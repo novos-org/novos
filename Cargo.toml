@@ -1,6 +1,6 @@
 [package]
 name = "novos"
-version = "0.1.5"
+version = "0.1.51"
 edition = "2024"
 authors = ["xer <xer@srclo.net>"]
 description = "Build at the speed of thought - a self-contained, high-performance SSG"
