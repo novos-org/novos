@@ -11,14 +11,12 @@ novos init my-website # defaults to . if no arg1
 You will prompted a series of questions:
 
 ```text
-✔ What is the URL of your site? · https://example.net
-✔ Site Title · example
-✔ Author Name · Your Name
-✔ Enable RSS generation? · yes
-✔ Build search index? · yes
-✔ Enable Sass compilation? · yes
-✔ Enable syntax highlighting? · no
-✔ Wipe output folder on every build? · yes
+What is the URL of your site? (https://example.com):
+Site Title (novos example):
+Author Name (Your Name):
+Do you want to enable Sass compilation? [Y/n]:
+Do you want to enable syntax highlighting? [y/N]:
+Do you want to build a search index of the content? [Y/n]:
 ```
 
 # Learning by Example
