@@ -29,8 +29,8 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 
 | Tier | Operating System | Notes |
 | :--- | :--- | :--- |
-| **Tier 1** | **OmniOS CE** | Primary development & CI target |
-| **Tier 1** | **FreeBSD** | Primary development & CI target |
+| **Tier 1** | **OmniOS CE** | Primary development |
+| **Tier 1** | **FreeBSD** | Primary development  |
 | **Tier 2** | Ubuntu LTS (Noble) | Verified compatibility |
 | **Tier 2** | Arch Linux | Verified compatibility |
 | **Tier 2** | Void Linux | Verified compatibility |
