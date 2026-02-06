@@ -8,7 +8,6 @@ use crate::{config::Config, parser, rss, models::Post};
 use rayon::prelude::*;
 use serde_json::json;
 use std::{
-    collections::HashMap,
     fs, io,
     path::{Path},
     sync::{Arc, Mutex},
@@ -35,7 +34,6 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 /// Compiles SCSS/SASS files located in the `sass/` directory using the `grass` crate.
-/// Respects the `sass_style` setting (expanded vs compressed) from novos.toml.
 pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     let sass_dir = Path::new("sass");
     if !sass_dir.exists() {
@@ -92,10 +90,13 @@ pub fn perform_build(
 
     println!("novos build v{}", env!("CARGO_PKG_VERSION"));
 
+    // Pre-load Tera Engine
+    let tera = parser::init_tera("templates");
+
     // Pre-load Syntax Highlighting Assets
     let ps = SyntaxSet::load_defaults_newlines();
     
-    // LOAD THEME: Logic for custom .tmTheme vs defaults
+    // LOAD THEME
     let theme = if let Some(ref custom_path) = config.build.syntax_theme_path {
         if verbose { println!("\x1b[2m  loading custom theme\x1b[0m {:?}", custom_path); }
         let theme_data = fs::read_to_string(custom_path)
@@ -104,7 +105,6 @@ pub fn perform_build(
         syntect::highlighting::ThemeSet::load_from_reader(&mut cursor)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse .tmTheme"))?
     } else {
-        // Fallback to internal syntect themes
         let ts = ThemeSet::load_defaults();
         ts.themes.get(&config.build.syntax_theme)
             .cloned()
@@ -117,20 +117,14 @@ pub fn perform_build(
         if config.output_dir.exists() {
             let _ = fs::remove_dir_all(&config.output_dir);
         }
-    } else {
-        println!("\x1b[2m[1/4]\x1b[0m Preparing output directory...");
     }
     
     fs::create_dir_all(&config.output_dir)?;
-
-    // Ensure the posts output directory exists
     let posts_out_path = config.output_dir.join(&config.posts_outdir);
     fs::create_dir_all(&posts_out_path)?;
 
     if config.static_dir.exists() {
-        if verbose {
-            println!("\x1b[2m  copying assets\x1b[0m");
-        }
+        if verbose { println!("\x1b[2m  copying assets\x1b[0m"); }
         copy_dir_all(&config.static_dir, &config.output_dir)?;
     }
 
@@ -141,9 +135,6 @@ pub fn perform_build(
     // Step 3: Content Collection
     println!("\x1b[2m[3/4]\x1b[0m Processing content...");
     
-    let main_tpl = fs::read_to_string(&config.template_path)?;
-    let view_tpl = fs::read_to_string(&config.view_template_path).unwrap_or_else(|_| "<% content %>".to_string());
-
     let mut post_paths = Vec::new();
     if config.posts_dir.exists() {
         for e in fs::read_dir(&config.posts_dir)? {
@@ -165,7 +156,7 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
-    // Generate Global Post List
+    // Generate Global Post List HTML (still passed as a variable to Tera)
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
         let link_path = if config.posts_outdir.is_empty() {
@@ -173,76 +164,61 @@ pub fn perform_build(
         } else {
             format!("{}{}/{}.html", config.base, config.posts_outdir, p.slug)
         };
-
-        posts_html.push_str(&format!(
-            "  <li>{} - <a href='{}'>{}</a></li>\n",
-            p.date, link_path, p.title
-        ));
+        posts_html.push_str(&format!("  <li>{} - <a href='{}'>{}</a></li>\n", p.date, link_path, p.title));
     }
     posts_html.push_str("</ul>");
 
-    // Step 4: Rendering and Metadata
+    // Step 4: Rendering
     println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
 
     // Parallel render posts
     posts.par_iter().for_each(|p| {
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
-            let mut vars = HashMap::new();
-            // Passing the &theme reference to the parser
             let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
-            let layout = parser::resolve_tags(&view_tpl, config, &posts_html, p, Some(&body), 0, &mut vars);
-            let final_h = parser::resolve_tags(&main_tpl, config, &posts_html, p, Some(&layout), 0, &mut vars);
-            fs::write(dest, final_h).ok();
+            
+            // Note: 'post.html' should 'extend' your base layout in Tera
+            let rendered = parser::render_template(&tera, "post.html", p, config, &posts_html, &body);
+            fs::write(dest, rendered).ok();
         }
     });
 
     // Optional RSS Feed
     if config.site.generate_rss {
-        if verbose { println!("\x1b[2m  generating rss\x1b[0m"); }
         let rss_xml = rss::generate_rss(&posts, config);
         fs::write(config.output_dir.join("rss.xml"), rss_xml)?;
     }
 
     // Optional Search Index
     if config.site.generate_search {
-        if verbose { println!("\x1b[2m  indexing search content\x1b[0m"); }
         let search_index: Vec<serde_json::Value> = posts.iter().map(|p| {
             let clean_text = parser::strip_markdown(&p.raw_content);
             let snippet: String = clean_text.chars().take(140).collect();
-
-            json!({
-                "title": p.title,
-                "slug": p.slug,
-                "date": p.date,
-                "tags": p.tags,
-                "snippet": snippet
-            })
+            json!({ "title": p.title, "slug": p.slug, "date": p.date, "tags": p.tags, "snippet": snippet })
         }).collect();
-        
         fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
     }
 
     // Process additional HTML pages
     if config.pages_dir.exists() {
-        let mut page_paths = Vec::new();
-        for e in fs::read_dir(&config.pages_dir)? {
-            let p = e?.path();
-            if p.extension().map(|s| s == "html").unwrap_or(false) {
-                page_paths.push(p);
+        let page_entries: Vec<_> = fs::read_dir(&config.pages_dir)?.filter_map(|e| e.ok()).collect();
+        page_entries.into_par_iter().for_each(|entry| {
+            let p = entry.path();
+            if p.extension().map(|s| s == "html" || s == "md").unwrap_or(false) {
+                let slug = p.file_stem().unwrap().to_str().unwrap();
+                let raw = fs::read_to_string(&p).unwrap_or_default();
+                let mt = fs::metadata(&p).and_then(|m| m.modified()).unwrap_or(lr);
+                let pd = parser::parse_frontmatter(&raw, slug, mt);
+                
+                let body = if p.extension().unwrap() == "md" {
+                    parser::render_markdown(&pd.raw_content, config.build.use_syntect, &ps, &theme)
+                } else {
+                    pd.raw_content.clone()
+                };
+
+                let rendered = parser::render_template(&tera, "page.html", &pd, config, &posts_html, &body);
+                fs::write(config.output_dir.join(format!("{}.html", slug)), rendered).ok();
             }
-        }
-        page_paths.into_par_iter().for_each(|p| {
-            let slug = p.file_stem().unwrap().to_str().unwrap();
-            let raw = fs::read_to_string(&p).unwrap_or_default();
-            let mt = fs::metadata(&p).and_then(|m| m.modified()).unwrap_or(lr);
-            let pd = parser::parse_frontmatter(&raw, slug, mt);
-            
-            let mut vars = HashMap::new();
-            let pb = parser::resolve_tags(&pd.raw_content, config, &posts_html, &pd, None, 0, &mut vars);
-            let fh = parser::resolve_tags(&main_tpl, config, &posts_html, &pd, Some(&pb), 0, &mut vars);
-            
-            fs::write(config.output_dir.join(format!("{}.html", slug)), fh).ok();
         });
     }
 
@@ -252,21 +228,17 @@ pub fn perform_build(
         title: config.site.title.clone(),
         date: "".to_string(),
         tags: vec![],
-        raw_content: "{% include home.html %}".to_string(),
+        raw_content: String::new(),
         mtime: SystemTime::now(),
     };
     
-    let mut index_vars = HashMap::new();
-    let index_body = parser::resolve_tags(&index_meta.raw_content, config, &posts_html, &index_meta, None, 0, &mut index_vars);
-    let index_page = parser::resolve_tags(&main_tpl, config, &posts_html, &index_meta, Some(&index_body), 0, &mut index_vars);
+    let index_page = parser::render_template(&tera, "index.html", &index_meta, config, &posts_html, "");
     fs::write(config.output_dir.join("index.html"), index_page)?;
 
-    // Update last run time
     if let Ok(mut lr_lock) = last_run_mu.lock() {
         *lr_lock = SystemTime::now();
     }
     
-    println!("\x1b[36msuccess\x1b[0m build complete.");
-    println!("Done in {:.2}s.", start.elapsed().as_secs_f32());
+    println!("\x1b[36msuccess\x1b[0m build complete in {:.2}s.", start.elapsed().as_secs_f32());
     Ok(())
 }

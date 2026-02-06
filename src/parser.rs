@@ -1,11 +1,29 @@
-use crate::{config::Config, models::Post};
+use crate::config::Config;
+use crate::models::Post;
 use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
-use std::{collections::HashMap, fs, time::SystemTime};
+use std::{fs, time::SystemTime};
+use tera::{Context, Tera};
 
 // Syntect imports
 use syntect::highlighting::Theme;
 use syntect::html::highlighted_html_for_string;
 use syntect::parsing::SyntaxSet;
+
+/// Initializes the Tera engine. 
+/// It's best to call this once at the start of your program.
+pub fn init_tera(template_dir: &str) -> Tera {
+    let mut tera = match Tera::new(&format!("{}/**/*", template_dir)) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Tera parsing error(s): {}", e);
+            std::process::exit(1);
+        }
+    };
+    // We disable auto-escaping because we are injecting pre-rendered 
+    // HTML from pulldown-cmark and syntect.
+    tera.autoescape_on(vec![]);
+    tera
+}
 
 /// Parses frontmatter from a file and returns a Post struct.
 pub fn parse_frontmatter(raw: &str, slug: &str, mtime: SystemTime) -> Post {
@@ -47,10 +65,10 @@ pub fn parse_frontmatter(raw: &str, slug: &str, mtime: SystemTime) -> Post {
 
 /// Renders Markdown string to HTML using pulldown-cmark and syntect for code highlighting.
 pub fn render_markdown(
-    md: &str, 
-    use_syntect: bool, 
-    ps: &SyntaxSet, 
-    theme: &Theme
+    md: &str,
+    use_syntect: bool,
+    ps: &SyntaxSet,
+    theme: &Theme,
 ) -> String {
     let options = Options::all();
     let parser = Parser::new_ext(md, options);
@@ -62,16 +80,13 @@ pub fn render_markdown(
 
     for event in parser {
         match event {
-            // Identify the start of a fenced code block
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(label))) if use_syntect => {
                 in_code_block = true;
                 current_lang = label.to_string();
                 temp_code.clear();
             }
-            // Identify the end of the code block (Fixed for pulldown-cmark 0.10+)
             Event::End(TagEnd::CodeBlock) if in_code_block => {
                 in_code_block = false;
-                
                 let syntax = ps
                     .find_syntax_by_token(&current_lang)
                     .unwrap_or_else(|| ps.find_syntax_plain_text());
@@ -83,7 +98,6 @@ pub fn render_markdown(
 
                 events.push(Event::Html(highlighted.into()));
             }
-            // Collect text if inside a code block
             Event::Text(text) => {
                 if in_code_block {
                     temp_code.push_str(&text);
@@ -91,7 +105,6 @@ pub fn render_markdown(
                     events.push(Event::Text(text));
                 }
             }
-            // Pass all other events through normally
             _ => {
                 if !in_code_block {
                     events.push(event);
@@ -105,103 +118,35 @@ pub fn render_markdown(
     html_output
 }
 
-/// The core engine: recursively resolves {% tags %}, handles variables, 
-/// and processes includes/shortcodes.
-pub fn resolve_tags(
-    content: &str,
-    config: &Config,
-    posts_html: &str,
+/// The core engine: uses Tera to render the final HTML.
+/// Replaces the old recursive 'resolve_tags' logic.
+pub fn render_template(
+    tera: &Tera,
+    template_name: &str,
     post: &Post,
-    body: Option<&str>,
-    depth: u32,
-    vars: &mut HashMap<String, String>,
+    config: &Config,
+    posts_list_html: &str,
+    rendered_content: &str,
 ) -> String {
-    if depth > 10 {
-        return content.to_string();
-    }
+    let mut context = Context::new();
+    
+    // Inject data into the template context
+    context.insert("post", post);
+    context.insert("config", config);
+    context.insert("content", rendered_content);
+    context.insert("posts", posts_list_html);
+    
+    // Helper variables for cleaner template access
+    context.insert("site_title", &config.site.title);
+    context.insert("base_url", &config.base_url);
 
-    let mut output = String::new();
-    let mut curr = content;
-
-    while let Some(start) = curr.find("{%") {
-        output.push_str(&curr[..start]);
-        let rem = &curr[start..];
-
-        if let Some(end) = rem.find("%}") {
-            let tag = rem[2..end].trim();
-
-            if tag.starts_with("set ") {
-                if let Some((key_part, val_part)) = tag[4..].split_once('=') {
-                    vars.insert(key_part.trim().to_string(), val_part.trim().to_string());
-                }
-            } else if tag.starts_with("print ") {
-                let key = tag[6..].trim();
-                if let Some(val) = vars.get(key) {
-                    output.push_str(val);
-                }
-            } else {
-                match tag {
-                    "base" => output.push_str(&config.base),
-                    "base_url" => output.push_str(&config.base_url),
-                    "site_title" => output.push_str(&config.site.title),
-                    "site_description" => output.push_str(&config.site.description),
-                    "site_author" => output.push_str(&config.site.author),
-                    "posts" => output.push_str(posts_html),
-                    "title" => output.push_str(&post.title),
-                    "date" => output.push_str(&post.date),
-                    "tags" => {
-                        let tags_html = post.tags.iter()
-                            .map(|t| format!("<span class=\"tag\">{}</span>", t))
-                            .collect::<Vec<_>>().join(" ");
-                        output.push_str(&tags_html);
-                    }
-                    "content" => output.push_str(body.unwrap_or(&post.raw_content)),
-                    
-                    _ if tag.starts_with("include ") => {
-                        let filename = tag[8..].trim();
-                        let path = config.includes_dir.join(filename);
-                        if let Ok(data) = fs::read_to_string(path) {
-                            output.push_str(&resolve_tags(&data, config, posts_html, post, body, depth + 1, vars));
-                        }
-                    }
-                    
-                    _ if tag.starts_with('.') => {
-                        let mut parts = tag[1..].split_whitespace();
-                        if let Some(name) = parts.next() {
-                            let args: Vec<String> = parts.map(|s| s.to_string()).collect();
-                            let path = config.includes_dir.join("shortcodes").join(format!("{}.html", name));
-                            if let Ok(template) = fs::read_to_string(path) {
-                                output.push_str(&render_shortcode(&template, &args));
-                            }
-                        }
-                    }
-
-                    _ => {
-                        if let Some(val) = vars.get(tag) {
-                            output.push_str(val);
-                        } else {
-                            output.push_str(&rem[..end + 2]);
-                        }
-                    }
-                }
-            }
-            curr = &rem[end + 2..];
-        } else {
-            break;
+    match tera.render(template_name, &context) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error rendering {}: {}", template_name, e);
+            format!("Rendering Error: {}", e)
         }
     }
-    output.push_str(curr);
-    output
-}
-
-/// Replaces placeholders like {%% 1 %%} with positional arguments.
-fn render_shortcode(template: &str, args: &[String]) -> String {
-    let mut rendered = template.to_string();
-    for (i, arg) in args.iter().enumerate() {
-        let placeholder = format!("{{%% {} %%}}", i + 1);
-        rendered = rendered.replace(&placeholder, arg);
-    }
-    rendered
 }
 
 /// Strips Markdown syntax to produce clean plain text for search indexing.

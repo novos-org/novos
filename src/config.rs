@@ -4,14 +4,11 @@
 //! sane defaults for any missing fields. It is structured into sub-modules
 //! (Site, Build, and Social) to keep the configuration file organized.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// The root configuration schema for a novos project.
-///
-/// This struct represents the entirety of `novos.toml`. If a field is missing,
-/// the engine provides defaults to ensures the build can proceed regardless.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     // --- Directory Settings ---
     
@@ -61,13 +58,13 @@ pub struct Config {
     #[serde(default)]
     pub site: SiteMetadata,
 
-    /// Settings that control the behavior of the build engine (Optimization, Minification).
+    /// Settings that control the behavior of the build engine.
     #[serde(default)]
     pub build: BuildSettings,
 }
 
 /// Metadata describing the website for SEO and RSS purposes.
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct SiteMetadata {
     /// The name of the website.
     #[serde(default = "default_title")]
@@ -91,7 +88,7 @@ pub struct SiteMetadata {
 }
 
 /// Flags and options that tune the build process.
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct BuildSettings {
     /// If true, the output directory is deleted before every build.
     #[serde(default = "default_bool_true")]
@@ -110,12 +107,13 @@ pub struct BuildSettings {
     pub use_syntect: bool,
 
     /// Syntax highlighting theme for code blocks.
-    /// Default: "base16-ocean.dark"
     #[serde(default = "default_theme")]
     pub syntax_theme: String,
-    pub syntax_theme_path: Option<String>,
 
-/// Optional directory containing custom .sublime-syntax files.
+    /// Path to a custom .tmTheme file.
+    pub syntax_theme_path: Option<PathBuf>,
+
+    /// Optional directory containing custom .sublime-syntax files.
     pub custom_syntax_dir: Option<PathBuf>,
 }
 
@@ -135,6 +133,5 @@ fn default_title() -> String { "a novos site".to_string() }
 fn default_sass_style() -> String { "expanded".to_string() }
 fn default_theme() -> String { "base16-ocean.dark".to_string() }
 
-// Boolean helpers for serde defaults
 fn default_bool_true() -> bool { true }
 fn default_bool_false() -> bool { false }

@@ -1,5 +1,6 @@
-{% set title = blog %}
+{% extends "base.html" %}
 
+{% block content %}
 <main class="container" id="main-content">
     <section class="hero">
         <h1>blog</h1>
@@ -10,7 +11,9 @@
       <div class="col">
 	<h2>Blog Posts</h2>
 	<br>
-	{% posts %}
-        </div>
+	{{ posts }}
+	
+      </div>
     </div>
 </main>
+{% endblock content %}

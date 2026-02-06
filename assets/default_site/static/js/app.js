@@ -92,7 +92,7 @@ function renderResults(results) {
   } else {
     resultsContainer.innerHTML = results.map(post => `
       <div class="search-entry">
-        <a href="/doc/${post.slug}">${post.title}</a>
+        <a href="/posts/${post.slug}">${post.title}</a>
         <small>${post.date} • ${post.tags.join(', ')}</small>
         <p>${post.snippet.substring(0, 80)}...</p>
       </div>

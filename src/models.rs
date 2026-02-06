@@ -1,5 +1,7 @@
 use std::time::SystemTime;
+use serde::Serialize;
 
+#[derive(Serialize)] // Add this
 pub struct Post {
     pub slug: String,
     pub title: String,
