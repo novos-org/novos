@@ -1,6 +1,7 @@
 <div align="center">
 
 # **novos**
+###### ( aka 'novos omits very old standards' )
 <img src="./assets/icon.png" alt="novos logo" width="250" height="250">
 
 **Build at the speed of thought.**
