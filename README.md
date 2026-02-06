@@ -34,6 +34,8 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 | **Tier 2** | Ubuntu LTS (Noble) | Verified compatibility |
 | **Tier 2** | Arch Linux | Verified compatibility |
 | **Tier 2** | Void Linux | Verified compatibility |
+| **Tier 3** | macOS (intel/Sillicon) | *"CI compiled it"* |
+| **Tier 3** | Windows | *"CI compiled it"* |
 
 ## Roadmap
 - [x] Parallel page generation
