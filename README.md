@@ -12,8 +12,7 @@
 
 > [!WARNING]
 > **novos** is currently beta software. Expect frequent updates and potential breaking changes as we approach v1.0.
-
-> [!WARNING]
+> 
 > **We are currently changing to Tera. For the meantime, the default template partially works. Same with the official website**
 
 ## What is novos?
