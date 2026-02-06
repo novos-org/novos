@@ -66,14 +66,16 @@ struct Cli {
 enum Commands {
     /// Compiles the project into a static site.
     Build,
-    /// Starts a local server on the specified port.
+    /// Starts a local server with live-reloading.
+    #[command(alias = "server")]
     Serve {
         /// Port to listen on.
         #[arg(short, long, default_value_t = 8080)]
         port: u16,
     },
-    /// Scaffolds a new project.
-    Init {
+     /// Scaffolds a new project.
+
+     Init {
         /// Target directory (defaults to current)
         #[arg(default_value = ".")]
         directory: String,
@@ -83,7 +85,8 @@ enum Commands {
     },
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let start = Instant::now();
     let cli = Cli::parse();
 
@@ -107,12 +110,16 @@ fn main() -> anyhow::Result<()> {
 
             match cli.command {
                 Commands::Build => {
-                    build::perform_build(&config, last_run, cli.verbose)?;
+                    // is_dev is false for standard builds
+                    build::perform_build(&config, last_run, cli.verbose, false)?;
+                    println!("\x1b[32msuccess\x1b[0m Build complete in {:.2}s.", start.elapsed().as_secs_f32());
                 }
-                Commands::Serve { port } => {
+                Commands::Serve { port } | Commands::Serve { port } => {
                     println!("novos serve v{}", env!("CARGO_PKG_VERSION"));
                     println!("\x1b[2m[1/1]\x1b[0m Starting server on port {}...", port);
-                    server::serve(config, last_run, port, cli.verbose)?;
+                    
+                    // We pass 'true' for is_dev to enable the live-reload script injection
+                    server::serve(config, last_run, port, cli.verbose).await?;
                 }
                 _ => unreachable!(),
             }
@@ -202,7 +209,6 @@ fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
         clean_out = prompt_confirm("Clean output directory before build?", true)?;
         minify = prompt_confirm("Minify HTML output?", false)?;
     } else {
-        // Minimal overrides for bare mode
         use_sass = false;
         use_syntect = false;
         gen_search = false;
@@ -248,7 +254,6 @@ sass_style = "{sass_style}"
     }
     fs::write(base_path.join("novos.toml"), toml_content)?;
 
-    // --- Asset Extraction ---
     println!("\x1b[2m[2/2]\x1b[0m Extracting assets...");
 
     if bare {

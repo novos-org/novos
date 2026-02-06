@@ -7,7 +7,7 @@
 use crate::{config::Config, parser, rss, models::Post};
 use rayon::prelude::*;
 use serde_json::json;
-use minify_html::{minify, Cfg}; // Added for minification
+use minify_html::{minify, Cfg};
 use std::{
     fs, io,
     path::{Path},
@@ -19,11 +19,37 @@ use std::{
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
-/// Helper to minify HTML strings if enabled in config.
-fn process_html(html: String, should_minify: bool) -> String {
+/// The WebSocket script injected during `novos serve` to enable live reloading.
+const LIVE_RELOAD_SCRIPT: &str = r#"
+<script id="novos-live-reload">
+    (function() {
+        const socket = new WebSocket('ws://' + window.location.host + '/novos/live');
+        socket.onmessage = (event) => {
+            if (event.data === 'reload') {
+                console.log('novos: Change detected, reloading...');
+                window.location.reload();
+            }
+        };
+        socket.onclose = () => console.log('novos: Live reload disconnected.');
+    })();
+</script>
+"#;
+
+/// Helper to minify HTML strings and optionally inject dev scripts.
+fn process_html(mut html: String, should_minify: bool, is_dev: bool) -> String {
+    // Inject Live Reload script before minification if in dev mode
+    if is_dev {
+        if let Some(pos) = html.find("</body>") {
+            html.insert_str(pos, LIVE_RELOAD_SCRIPT);
+        } else {
+            html.push_str(LIVE_RELOAD_SCRIPT);
+        }
+    }
+
     if !should_minify {
         return html;
     }
+
     let mut cfg = Cfg::new();
     cfg.minify_js = true;
     cfg.minify_css = true;
@@ -99,17 +125,15 @@ pub fn perform_build(
     config: &Config,
     last_run_mu: Arc<Mutex<SystemTime>>,
     verbose: bool,
+    is_dev: bool,
 ) -> io::Result<()> {
     let start = Instant::now();
     let lr = *last_run_mu.lock().unwrap();
-
-    println!("novos build v{}", env!("CARGO_PKG_VERSION"));
 
     let tera = parser::init_tera("templates");
     let ps = SyntaxSet::load_defaults_newlines();
     
     let theme = if let Some(ref custom_path) = config.build.syntax_theme_path {
-        if verbose { println!("\x1b[2m  loading custom theme\x1b[0m {:?}", custom_path); }
         let theme_data = fs::read_to_string(custom_path)
             .map_err(|e| io::Error::new(io::ErrorKind::NotFound, format!("Theme file not found: {}", e)))?;
         let mut cursor = io::Cursor::new(theme_data);
@@ -124,7 +148,7 @@ pub fn perform_build(
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
-        println!("\x1b[2m[1/4]\x1b[0m Cleaning output directory...");
+        if verbose { println!("\x1b[2m[1/4]\x1b[0m Cleaning output directory..."); }
         if config.output_dir.exists() {
             let _ = fs::remove_dir_all(&config.output_dir);
         }
@@ -135,16 +159,15 @@ pub fn perform_build(
     fs::create_dir_all(&posts_out_path)?;
 
     if config.static_dir.exists() {
-        if verbose { println!("\x1b[2m  copying assets\x1b[0m"); }
         copy_dir_all(&config.static_dir, &config.output_dir)?;
     }
 
     // Step 2: Stylesheets
-    println!("\x1b[2m[2/4]\x1b[0m Compiling stylesheets...");
+    if verbose { println!("\x1b[2m[2/4]\x1b[0m Compiling stylesheets..."); }
     compile_sass(config, verbose)?;
 
     // Step 3: Content Collection
-    println!("\x1b[2m[3/4]\x1b[0m Processing content...");
+    if verbose { println!("\x1b[2m[3/4]\x1b[0m Processing content..."); }
     
     let mut post_paths = Vec::new();
     if config.posts_dir.exists() {
@@ -179,28 +202,24 @@ pub fn perform_build(
     posts_html.push_str("</ul>");
 
     // Step 4: Rendering
-    println!("\x1b[2m[4/4]\x1b[0m Rendering pages...");
+    if verbose { println!("\x1b[2m[4/4]\x1b[0m Rendering pages..."); }
 
-    // Parallel render posts
     posts.par_iter().for_each(|p| {
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
             let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
             let rendered = parser::render_template(&tera, "post.html", p, config, &posts_html, &body);
             
-            // Apply Minification
-            let final_html = process_html(rendered, config.build.minify_html);
+            let final_html = process_html(rendered, config.build.minify_html, is_dev);
             fs::write(dest, final_html).ok();
         }
     });
 
-    // Optional RSS Feed
     if config.site.generate_rss {
         let rss_xml = rss::generate_rss(&posts, config);
         fs::write(config.output_dir.join("rss.xml"), rss_xml)?;
     }
 
-    // Optional Search Index
     if config.site.generate_search {
         let search_index: Vec<serde_json::Value> = posts.iter().map(|p| {
             let clean_text = parser::strip_markdown(&p.raw_content);
@@ -210,7 +229,6 @@ pub fn perform_build(
         fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
     }
 
-    // Process additional HTML pages
     if config.pages_dir.exists() {
         let page_entries: Vec<_> = fs::read_dir(&config.pages_dir).unwrap().filter_map(|e| e.ok()).collect();
         page_entries.into_par_iter().for_each(|entry| {
@@ -228,15 +246,12 @@ pub fn perform_build(
                 };
 
                 let rendered = parser::render_template(&tera, "page.html", &pd, config, &posts_html, &body);
-                
-                // Apply Minification
-                let final_html = process_html(rendered, config.build.minify_html);
+                let final_html = process_html(rendered, config.build.minify_html, is_dev);
                 fs::write(config.output_dir.join(format!("{}.html", slug)), final_html).ok();
             }
         });
     }
 
-    // Render Home Page
     let index_meta = Post {
         slug: "index".to_string(),
         title: config.site.title.clone(),
@@ -247,15 +262,15 @@ pub fn perform_build(
     };
     
     let index_page = parser::render_template(&tera, "index.html", &index_meta, config, &posts_html, "");
-    
-    // Apply Minification
-    let final_index = process_html(index_page, config.build.minify_html);
+    let final_index = process_html(index_page, config.build.minify_html, is_dev);
     fs::write(config.output_dir.join("index.html"), final_index)?;
 
     if let Ok(mut lr_lock) = last_run_mu.lock() {
         *lr_lock = SystemTime::now();
     }
     
-    println!("\x1b[36msuccess\x1b[0m build complete in {:.2}s.", start.elapsed().as_secs_f32());
+    if verbose {
+        println!("\x1b[36msuccess\x1b[0m build complete in {:.2}s.", start.elapsed().as_secs_f32());
+    }
     Ok(())
 }

@@ -17,4 +17,4 @@ To install using `cargo install`: (This installs novos to `$HOME/.cargo/bin/novo
 cargo install novos
 ```
 
-To install via GitHub releases, visit [github.com/novos-org/novos/releases](https://github.com/novos-org/novos/releases)  and download the binary for your operating system / archtype.
+To install via GitHub releases, visit [github.com/novos-org/novos/releases](https://github.com/novos-org/novos/releases) and download the binary for your operating system / archtype.

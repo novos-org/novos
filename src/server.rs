@@ -1,82 +1,100 @@
+//! High-performance development server for `novos`.
 use crate::build::perform_build;
 use crate::config::Config;
-use notify::{recommended_watcher, RecursiveMode, Result as NotifyResult};
-use notify::Watcher;
-use std::{fs, path::Path, sync::{Arc, Mutex}, time::SystemTime};
-use tiny_http;
 use anyhow::Result;
+use axum::{
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    routing::get,
+    Router,
+};
+use notify::{PollWatcher, Config as WatcherConfig, RecursiveMode, Watcher};
+use std::{path::Path, sync::{Arc, Mutex}, time::{SystemTime, Duration}};
+use tokio::sync::{broadcast, mpsc};
+use tower_http::services::ServeDir;
 
-/// Serve the generated site and watch the working directory for changes.
-pub fn serve(
+pub async fn serve(
     config: Config,
     last_run: Arc<Mutex<SystemTime>>,
     port: u16,
     verbose: bool,
 ) -> Result<()> {
-    // initial build
-    perform_build(&config, Arc::clone(&last_run), verbose)?;
+    // 1. Build initial ignore list as owned Strings
+    let mut ignore_list = vec![
+        ".git".to_string(), 
+        "target".to_string(), 
+        "#".to_string(), 
+        ".swp".to_string()
+    ];
+    
+    if let Ok(gc) = tokio::fs::read_to_string(".gitignore").await {
+        for line in gc.lines().map(|l| l.trim()).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+            ignore_list.push(line.to_string()); // Convert to owned String
+        }
+    }
 
-    // watcher: rebuild on modify events
-    let config_c = config.clone();
-    let lr_c = Arc::clone(&last_run);
-    let verb = verbose;
+    // 2. Initial build
+    perform_build(&config, Arc::clone(&last_run), verbose, true)?;
 
-    // recommended_watcher returns Result<impl Watcher, notify::Error>
-    let mut watcher = recommended_watcher(move |res: NotifyResult<notify::Event>| {
-        if let Ok(event) = res {
-            if event.kind.is_modify() {
-                // best-effort rebuild; ignore errors here
-                let _ = perform_build(&config_c, Arc::clone(&lr_c), verb);
+    let (tx, _rx) = broadcast::channel::<()>(16);
+    let (event_tx, mut event_rx) = mpsc::channel::<()>(100);
+
+    // 3. Async Build Worker
+    let tx_worker = tx.clone();
+    let config_worker = config.clone();
+    let lr_worker = Arc::clone(&last_run);
+    tokio::spawn(async move {
+        while let Some(_) = event_rx.recv().await {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            while event_rx.try_recv().is_ok() {}
+            if verbose { println!("\x1b[32m[novos] Change detected, rebuilding...\x1b[0m"); }
+            if perform_build(&config_worker, Arc::clone(&lr_worker), verbose, true).is_ok() {
+                let _ = tx_worker.send(());
             }
         }
-    })?;
+    });
+
+    // 4. The PollWatcher (Panic-proof for FreeBSD)
+    let watcher_tx = event_tx.clone();
+    let watch_config = WatcherConfig::default().with_poll_interval(Duration::from_millis(200));
+    
+    let mut watcher = PollWatcher::new(move |res: notify::Result<notify::Event>| {
+        if let Ok(event) = res {
+            let is_valid = event.paths.iter().any(|p| {
+                let s = p.to_string_lossy();
+                let name = p.file_name().unwrap_or_default().to_string_lossy();
+                
+                let is_ignored = ignore_list.iter().any(|ig| s.contains(ig)) 
+                                || name.starts_with('.') 
+                                || name.starts_with('#') 
+                                || name.ends_with('~');
+                !is_ignored
+            });
+
+            if is_valid && (event.kind.is_modify() || event.kind.is_create()) {
+                let _ = watcher_tx.try_send(());
+            }
+        }
+    }, watch_config)?;
 
     watcher.watch(Path::new("."), RecursiveMode::Recursive)?;
 
-    // server
-    let addr = format!("0.0.0.0:{}", port);
-    let server = tiny_http::Server::http(&addr)
-        .map_err(|e| anyhow::Error::msg(e.to_string()))?;
+    // 5. Axum Server
+    let app = Router::new()
+        .route("/novos/live", get(move |ws: WebSocketUpgrade| {
+            let rx = tx.subscribe();
+            async move { ws.on_upgrade(|socket| handle_socket(socket, rx)) }
+        }))
+        .fallback_service(ServeDir::new(&config.output_dir));
 
-    println!("\x1b[33m Thinking at http://0.0.0.0:{}\x1b[0m", port);
-
-    for request in server.incoming_requests() {
-        let url: &str = request.url().split('?').next().unwrap_or("/");
-        let f_path = if url == "/" { "index.html".into() } else { url[1..].to_string() };
-        let mut full = config.output_dir.join(&f_path);
-
-        if !full.exists() && !f_path.contains('.') {
-            let alt = config.output_dir.join(format!("{}.html", f_path));
-            if alt.exists() { full = alt; }
-        }
-
- let response = match fs::read(&full) {
-    Ok(d) => {
-        // Extract extension from the actual file path being served
-        let extension = full.extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
-
-        let ct = match extension {
-            "css"  => "text/css",
-            "js"   => "application/javascript",
-            "json" => "application/json",
-            "xml"  => "application/xml",
-            "png"  => "image/png",
-            "jpg" | "jpeg" => "image/jpeg",
-            "svg"  => "image/svg+xml",
-            "txt"  => "text/plain",
-            _      => "text/html; charset=utf-8", // Default for .html or extensionless
-        };
-
-        tiny_http::Response::from_data(d).with_header(
-            tiny_http::Header::from_bytes(&b"Content-Type"[..], ct.as_bytes()).unwrap()
-        )
-    },
-    Err(_) => tiny_http::Response::from_string("404 - no philosophies found").with_status_code(404),
-};
-let _ = request.respond(response);
-    }
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
+    println!("\x1b[33m novos thinking at http://localhost:{}\x1b[0m", port);
+    axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
 
     Ok(())
+}
+
+async fn handle_socket(mut socket: WebSocket, mut rx: broadcast::Receiver<()>) {
+    while let Ok(_) = rx.recv().await {
+        if socket.send(Message::Text("reload".into())).await.is_err() { break; }
+    }
 }
