@@ -105,7 +105,7 @@ pub fn render_markdown(
     html_output
 }
 
-/// The core engine: recursively resolves <% tags %>, handles variables, 
+/// The core engine: recursively resolves {% tags %}, handles variables, 
 /// and processes includes/shortcodes.
 pub fn resolve_tags(
     content: &str,
@@ -123,11 +123,11 @@ pub fn resolve_tags(
     let mut output = String::new();
     let mut curr = content;
 
-    while let Some(start) = curr.find("<%") {
+    while let Some(start) = curr.find("{%") {
         output.push_str(&curr[..start]);
         let rem = &curr[start..];
 
-        if let Some(end) = rem.find("%>") {
+        if let Some(end) = rem.find("%}") {
             let tag = rem[2..end].trim();
 
             if tag.starts_with("set ") {
@@ -194,11 +194,11 @@ pub fn resolve_tags(
     output
 }
 
-/// Replaces placeholders like <%= a1 =%> with positional arguments.
+/// Replaces placeholders like {%% 1 %%} with positional arguments.
 fn render_shortcode(template: &str, args: &[String]) -> String {
     let mut rendered = template.to_string();
     for (i, arg) in args.iter().enumerate() {
-        let placeholder = format!("<%= a{} =%>", i + 1);
+        let placeholder = format!("{%% {} %%}", i + 1);
         rendered = rendered.replace(&placeholder, arg);
     }
     rendered

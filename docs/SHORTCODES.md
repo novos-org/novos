@@ -9,18 +9,18 @@ Shortcodes are reusable HTML components stored in your includes/shortcodes/ dire
 # Invocation Syntax
 Shortcodes use a dot-prefix to distinguish them from standard variables or includes.
 ```html
-<% .shortcode_name "arg1" "arg2" "arg3" %>
+{% .shortcode_name "arg1" "arg2" "arg3" %}
 ```
 
 > [!TIP]
-> Arguments with spaces: Wrap them in double quotes. Simple arguments: Quotes are optional if there are no spaces (e.g., `<% .youtube dQw4w9WgXcQ %>`).
+> Arguments with spaces: Wrap them in double quotes. Simple arguments: Quotes are optional if there are no spaces (e.g., `{% .youtube dQw4w9WgXcQ %}`).
 
 # Internal Logic
 Inside the .html file, arguments are accessed via indexed variables starting at 1.
 
 | Variable | Usage |
 |---|---|
-| `<%= a1 =%>` | The first argument passed. |
-| `<%= a2 =%>` | The second argument passed. |
+| `<%% 1 %%>` | The first argument passed. |
+| `<%% 2 %%>` | The second argument passed. |
 
 And so on.

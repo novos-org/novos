@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <title><% print title %> - <% site_name %></title>
-    <link rel="icon" href="<% base %>/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="{% base %}/favicon.svg" type="image/svg+xml">
 
-    <link rel="icon" href="<% base %>/favicon.png" type="image/png">
-    <link rel="stylesheet" href="<% base %>/css/solarnight.css">
-    <script src="<% base %>/js/app.js" defer></script>
+    <link rel="icon" href="{% base %}/favicon.png" type="image/png">
+    <link rel="stylesheet" href="{% base %}/css/solarnight.css">
+    <script src="{% base %}/js/app.js" defer></script>
 
 </head>
 
@@ -17,12 +17,12 @@
     <div class="wrapper flex items-center justify-between py-4">
 
       <ul class="nav-links">
-        <li><a href="<% base %>/">index</a></li>
-        <li><a href="<% base %>/blog">blog</a></li>
+        <li><a href="{% base %}/">index</a></li>
+        <li><a href="{% base %}/blog">blog</a></li>
       </ul>
 
-      <% .themetoggle %>
-      <% .search %>
+      {% .themetoggle %}
+      {% .search posts %}
         <button class="menu-toggle" aria-label="Toggle Menu" aria-expanded="false">
           <div class="icon-logo"></div>
         </button>
