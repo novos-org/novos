@@ -4,7 +4,7 @@ Shortcodes are reusable HTML components stored in your includes/shortcodes/ dire
 # Storage & Naming
 - **Path**: includes/shortcodes/*.html
 - **Naming**: The filename (minus the .html extension) becomes the command name.
-    - **Example**: includes/shortcodes/notice.html is called via <% .notice %>.
+    - **Example**: includes/shortcodes/notice.html is called via {% .notice %}.
 
 # Invocation Syntax
 Shortcodes use a dot-prefix to distinguish them from standard variables or includes.
@@ -22,5 +22,9 @@ Inside the .html file, arguments are accessed via indexed variables starting at 
 |---|---|
 | `<%% 1 %%>` | The first argument passed. |
 | `<%% 2 %%>` | The second argument passed. |
+| `<%% 3 %%>` | The third argument passed. |
+| `<%% 4 %%>` | The fourth argument passed. |
+| `<%% 5 %%>` | The fifth argument passed. |
+| `<%% 6 %%>` | The sixth argument passed. |
+| `<%% 7 %%>` | The seventh argument passed. |
 
-And so on.

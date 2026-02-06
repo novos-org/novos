@@ -24,7 +24,6 @@ You will prompted a series of questions:
 # Learning by Example
 If you prefer to start with a working template, you can clone the official documentation or a live production site:
 - Official Website: `git clone https://github.com/novos-org/website.git`
-- Production Blog (xer): `git clone https://github.com/xerrkk/srclo.net.git`
 
 # Directory Structure
 A novos project is designed to be flat and transparent. No hidden magic—just files where you expect them:

@@ -32,7 +32,7 @@ search.json consists of 3 main parts:
 The default `novos init` includes javascript snippets and a shortcode (`<% .search %>`) for usage. The snippets are shown below.
 
 ## Shortcode
-> Usage: `<% .search %>`
+> Usage: `{% .search %}`
 
 ```html
       <div class="flex items-center gap-4">
@@ -40,7 +40,7 @@ The default `novos init` includes javascript snippets and a shortcode (`<% .sear
           <input
             type="text"
             id="search-input"
-            placeholder="Search posts..."
+            placeholder="Search {%% 1 %%}..."
             autocomplete="off"
             aria-label="Search"
           >
