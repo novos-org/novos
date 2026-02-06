@@ -198,7 +198,7 @@ pub fn resolve_tags(
 fn render_shortcode(template: &str, args: &[String]) -> String {
     let mut rendered = template.to_string();
     for (i, arg) in args.iter().enumerate() {
-        let placeholder = format!("{%% {} %%}", i + 1);
+        let placeholder = format!("{{%% {} %%}}", i + 1);
         rendered = rendered.replace(&placeholder, arg);
     }
     rendered
