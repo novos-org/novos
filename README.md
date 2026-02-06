@@ -44,6 +44,7 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 ## Themes
 (we currently have one theme, more coming soon!)
 - Solarnight (sass/solarnight.scss)
+  - Solarnight is a Rose Pine inspired theme. 
 
 ## Documentation
 Documentation is available at [docs/](./docs)
