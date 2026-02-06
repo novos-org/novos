@@ -6,7 +6,7 @@ authors = ["xer <xer@srclo.net>"]
 description = "Build at the speed of thought - a self-contained, high-performance SSG"
 readme = "README.md"
 repository = "https://github.com/novos-org/novos"
-license = "BSD-3-Clause"
+license = "Apache-2.0 OR MIT"
 keywords = ["ssg", "static-site", "sass", "fast", "freebsd"]
 categories = ["command-line-utilities", "web-programming"]
 

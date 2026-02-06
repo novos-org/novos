@@ -94,3 +94,8 @@ xychart-beta
 - **Zero-Copy Parsing**: Leveraging pulldown-cmark's event-based parser.
 - **Work-Stealing Parallelism**: Rayon dynamically balances page rendering across all available CPU threads.
 - **Sass compilation techniques**: Using native grass avoids the overhead of external process calls to Node or Dart.
+
+
+
+
+Commits prior to 2d1acf1be5fb605694cc2f95c5efe8dad0b35de0 are three clause BSD. Commits after that point are Apache-2.0 OR MIT
