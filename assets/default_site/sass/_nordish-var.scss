@@ -1,0 +1,92 @@
+/* --- novos: Nord-ish Theme (Polar Night & Frost) --- */
+
+@mixin nord-colors {
+  /* Nord Palette: Polar Night & Snow Storm */
+  --bg-top: #2e3440;       /* nord0 */
+  --bg-bottom: #3b4252;    /* nord1 */
+  --bg-body: #2e3440;      /* nord0 */
+  
+  /* Glassmorphism Accents */
+  --glass-bg: rgba(46, 52, 64, 0.8);        /* nord0 w/ alpha */
+  --glass-border: rgba(76, 86, 106, 0.4);   /* nord3 */
+  
+  --bg-alt: #3b4252;       /* nord1 */
+  --bg-pre: #434c5e;       /* nord2 */
+  
+  /* Text and Accents */
+  --text-main: #d8dee9;    /* nord4 */
+  --text-headers: #eceff4; /* nord6 */
+  --text-muted: #616e88;   /* nord3-ish brighter */
+  
+  --primary: #88c0d0;      /* nord8 (Frost Blue) */
+  --primary-hover: #8fbcbb; /* nord7 (Cyan/Frost) */
+  
+  --border: #434c5e;       /* nord2 */
+  --input-bg: rgba(59, 66, 82, 0.6); /* nord1 */
+  
+  /* Code Highlight colors (optional for syntect bridge) */
+  --code-keyword: #81a1c1; /* nord9 */
+  --code-string: #a3be8c;  /* nord14 */
+  --code-func: #88c0d0;    /* nord8 */
+}
+
+:root {
+  /* Light Mode Fallback (Snow Storm) */
+  --bg-body: #eceff4;
+  --glass-bg: rgba(235, 237, 241, 0.7);
+  --glass-border: rgba(216, 222, 233, 0.5);
+  --bg-alt: #e5e9f0;
+  --bg-pre: #d8dee9;
+  --text-main: #2e3440;
+  --text-headers: #3b4252;
+  --text-muted: #4c566a;
+  --primary: #5e81ac;      /* nord10 */
+  --primary-hover: #81a1c1; /* nord9 */
+  --border: rgba(0, 0, 0, 0.05);
+  --input-bg: rgba(255, 255, 255, 0.5);
+  --blur-amount: 12px;
+
+  @media (prefers-color-scheme: dark) {
+    &:not([data-theme="light"]) {
+      @include nord-colors;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  @include nord-colors;
+}
+
+/* --- SASS BRIDGE --- */
+$primary: var(--primary);
+$primary-hover: var(--primary-hover);
+$text-main: var(--text-main);
+$text-dark: var(--text-muted);
+$text-headers: var(--text-headers);
+$text-muted: var(--text-muted);
+$border-color: var(--border);
+$bg-gray: var(--bg-alt);
+$bg-body: var(--bg-body);
+
+/* Modern Layout Utilities */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-amount));
+  -webkit-backdrop-filter: blur(var(--blur-amount));
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary);
+  }
+}
+
+code {
+  background: var(--bg-pre);
+  color: var(--primary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
