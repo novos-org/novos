@@ -1,6 +1,6 @@
 [package]
 name = "novos"
-version = "0.1.522"
+version = "0.1.523"
 edition = "2024"
 authors = ["xer <xer@srclo.net>"]
 description = "Build at the speed of thought - a self-contained, high-performance SSG"
@@ -17,6 +17,11 @@ lto = true             # Enable Link Time Optimization (huge for speed)
 codegen-units = 1      # Reduce parallel codegen for better optimization
 panic = 'abort'        # Remove stack unwinding (shrinks binary, slight speed boost)
 strip = true           # Automatically strip symbols (smaller binary)
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [dependencies]
 pulldown-cmark = "0.13.0"
