@@ -4,7 +4,7 @@ public/
 *~
 *.swp
 Thumbs.db
+dist/
 node_modules/
 **/target/
 target/
-test
