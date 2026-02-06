@@ -28,7 +28,7 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 - **search.json**, so you can search
 - **syntect**, because who hates colors?
 - **minification**, because you want speed, right?
-- **Axum**, for a stellar webserver + WebSockts.
+- **Axum**, for a stellar webserver + WebSockets.
 - [**Tera**](https://keats.github.io/tera), because who loves repeating themselves?
 
 ## Supported OSes
