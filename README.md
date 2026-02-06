@@ -39,7 +39,9 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 - [x] Parallel page generation
 - [ ] Live reload inside dev server
 - [X] Theme: Nord-ish
-- [ ] Plugin API (WASM)
+- [ ] Plugin API (WASM + .so)
+- [ ] Taxonomies
+- [ ] Pagination
 
 ## Themes
 - Solarnight (sass/solarnight.scss)
