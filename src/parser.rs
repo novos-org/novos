@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::models::Post;
 use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
-use std::{fs, time::SystemTime};
+use std::{time::SystemTime};
 use tera::{Context, Tera};
 
 // Syntect imports

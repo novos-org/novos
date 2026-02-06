@@ -1,0 +1,30 @@
+base_url = "https://example.net"
+base = ""
+
+posts_dir   = "./posts"
+pages_dir   = "./pages"
+static_dir  = "./static"
+output_dir  = "./.build"
+posts_outdir = "posts/"
+
+template_path      = "./index.html"
+includes_dir       = "./includes"
+view_template_path = "./includes/view_template.html"
+
+[site]
+title = "novos example"
+description = "A fast, minimal static site generated with Rust."
+author = "Your Name"
+generate_rss = true
+generate_search = true
+
+[build]
+# If true, wipes the .build folder every time (recommended for prod)
+clean_output = true
+
+# syntax_theme = "InspiredGitHub"
+syntax_theme_path = "static/themes/solarnight.tmTheme"
+use_syntect = true
+
+# Options: "expanded" or "compressed"
+sass_style = "compressed"

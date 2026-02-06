@@ -24,17 +24,25 @@ mod build;
 mod server;
 
 use clap::{Parser as ClapParser, Subcommand};
-use dialoguer::{theme::ColorfulTheme, Input, Confirm};
 use rust_embed::RustEmbed;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
-use syntect::highlighting::Theme;
-use std::io::Cursor;
-use syntect::highlighting::ThemeSet;
- 
+use std::io::{self, Write, Cursor};
+use syntect::highlighting::{Theme, ThemeSet};
 
+/// Assets for the default site template, embedded into the binary.
+#[derive(RustEmbed)]
+#[folder = "assets/default_site/"]
+struct Asset;
+
+/// Assets for the bare/minimal site template, embedded into the binary.
+#[derive(RustEmbed)]
+#[folder = "assets/blank_site/"]
+struct BlankAsset;
+
+/// Load a custom .tmTheme file for syntect.
 pub fn load_custom_theme(path: &std::path::Path) -> Theme {
     let theme_file = fs::read_to_string(path)
         .expect("Failed to read .tmTheme file");
@@ -43,17 +51,13 @@ pub fn load_custom_theme(path: &std::path::Path) -> Theme {
         .expect("Failed to parse .tmTheme")
 }
 
-/// Assets for the default site template, embedded into the binary.
-#[derive(RustEmbed)]
-#[folder = "assets/default_site/"]
-struct Asset;
-
 /// novos CLI - Build at the speed of thought.
 #[derive(ClapParser)]
 #[command(author, version, about = "novos - Build at the speed of thought. ")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+    /// Enable verbose logging output.
     #[arg(short, long)]
     verbose: bool,
 }
@@ -64,6 +68,7 @@ enum Commands {
     Build,
     /// Starts a local server on the specified port.
     Serve {
+        /// Port to listen on.
         #[arg(short, long, default_value_t = 8080)]
         port: u16,
     },
@@ -72,6 +77,9 @@ enum Commands {
         /// Target directory (defaults to current)
         #[arg(default_value = ".")]
         directory: String,
+        /// Skip prompts and use a minimal, blank template.
+        #[arg(short, long)]
+        bare: bool,
     },
 }
 
@@ -80,9 +88,9 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Init { directory } => {
+        Commands::Init { directory, bare } => {
             println!("novos init v{}", env!("CARGO_PKG_VERSION"));
-            init_project(&directory)?;
+            init_project(&directory, bare)?;
             println!("\n\x1b[36msuccess\x1b[0m Project initialized in '{}'.", directory);
             println!("Done in {:.2}s.", start.elapsed().as_secs_f32());
         }
@@ -113,51 +121,93 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Extracts embedded assets and gathers user configuration via interactive prompts.
-fn init_project(target_dir: &str) -> anyhow::Result<()> {
+/// Helper to read input with a default value.
+fn prompt_input(message: &str, default: &str) -> io::Result<String> {
+    print!("{message} ({default}): ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        Ok(default.to_string())
+    } else {
+        Ok(trimmed.to_string())
+    }
+}
+
+/// Helper to handle [Y/n] or [y/N] logic.
+fn prompt_confirm(message: &str, default_yes: bool) -> io::Result<bool> {
+    let suffix = if default_yes { "[Y/n]" } else { "[y/N]" };
+    print!("{message} {suffix}: ");
+    io::stdout().flush()?;
+    
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let trimmed = input.trim().to_lowercase();
+
+    if trimmed.is_empty() {
+        return Ok(default_yes);
+    }
+
+    match trimmed.as_str() {
+        "y" | "yes" => Ok(true),
+        "n" | "no" => Ok(false),
+        _ => Ok(default_yes),
+    }
+}
+
+/// Extracts embedded assets from the binary into the target directory.
+fn extract_assets<E: RustEmbed>(base_path: &Path) -> anyhow::Result<()> {
+    for file in E::iter() {
+        let rel_path = Path::new(file.as_ref());
+        let full_path = base_path.join(rel_path);
+
+        if let Some(parent) = full_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let content = E::get(file.as_ref()).expect("failed to read embedded asset");
+
+        if !full_path.exists() {
+            fs::write(full_path, content.data)?;
+        }
+    }
+    Ok(())
+}
+
+/// Extracts embedded assets and gathers user configuration via raw stdout/stdin.
+fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
     let base_path = PathBuf::from(target_dir);
-    let theme = ColorfulTheme::default();
+
+    // Initial Defaults
+    let mut url = "https://example.com".to_string();
+    let mut title = "new novos site".to_string();
+    let mut author = "admin".to_string();
+    let mut use_sass = true;
+    let mut use_syntect = true;
+    let mut gen_search = true;
+    let mut gen_rss = true;
+    let mut clean_out = true;
+    let mut minify = false;
 
     // --- Interactive Prompts ---
-    let url: String = Input::with_theme(&theme)
-        .with_prompt("What is the URL of your site?")
-        .default("https://example.net".into())
-        .interact_text()?;
-
-    let title: String = Input::with_theme(&theme)
-        .with_prompt("Site Title")
-        .default("novos example".into())
-        .interact_text()?;
-
-    let author: String = Input::with_theme(&theme)
-        .with_prompt("Author Name")
-        .default("Your Name".into())
-        .interact_text()?;
-
-    let gen_rss = Confirm::with_theme(&theme)
-        .with_prompt("Enable RSS generation?")
-        .default(true)
-        .interact()?;
-
-    let gen_search = Confirm::with_theme(&theme)
-        .with_prompt("Build search index?")
-        .default(true)
-        .interact()?;
-
-    let use_sass = Confirm::with_theme(&theme)
-        .with_prompt("Enable Sass compilation?")
-        .default(true)
-        .interact()?;
-
-    let use_syntect = Confirm::with_theme(&theme)
-        .with_prompt("Enable syntax highlighting?")
-        .default(false)
-        .interact()?;
-
-    let clean_out = Confirm::with_theme(&theme)
-        .with_prompt("Wipe output folder on every build?")
-        .default(true)
-        .interact()?;
+    if !bare {
+        url = prompt_input("What is the URL of your site?", &url)?;
+        title = prompt_input("Site Title", &title)?;
+        author = prompt_input("Author Name", &author)?;
+        use_sass = prompt_confirm("Do you want to enable Sass compilation?", true)?;
+        use_syntect = prompt_confirm("Do you want to enable syntax highlighting?", true)?;
+        gen_search = prompt_confirm("Do you want to build a search index?", true)?;
+        gen_rss = prompt_confirm("Do you want to generate an RSS feed?", true)?;
+        clean_out = prompt_confirm("Clean output directory before build?", true)?;
+        minify = prompt_confirm("Minify HTML output?", false)?;
+    } else {
+        // Minimal overrides for bare mode
+        use_sass = false;
+        use_syntect = false;
+        gen_search = false;
+        gen_rss = false;
+    }
 
     println!("\n\x1b[2m[1/2]\x1b[0m Generating novos.toml...");
 
@@ -186,7 +236,8 @@ generate_search = {gen_search}
 
 [build]
 clean_output = {clean_out}
-syntax_theme = "InspiredGitHub"
+minify_html = {minify}
+syntax_theme = "base16-ocean.dark"
 use_syntect = {use_syntect}
 sass_style = "{sass_style}"
 "#
@@ -198,21 +249,12 @@ sass_style = "{sass_style}"
     fs::write(base_path.join("novos.toml"), toml_content)?;
 
     // --- Asset Extraction ---
-    println!("\x1b[2m[2/2]\x1b[0m Extracting default assets...");
+    println!("\x1b[2m[2/2]\x1b[0m Extracting assets...");
 
-    for file in Asset::iter() {
-        let rel_path = Path::new(file.as_ref());
-        let full_path = base_path.join(rel_path);
-
-        if let Some(parent) = full_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        let content = Asset::get(file.as_ref()).expect("failed to read embedded asset");
-
-        if !full_path.exists() {
-            fs::write(full_path, content.data)?;
-        }
+    if bare {
+        extract_assets::<BlankAsset>(&base_path)?;
+    } else {
+        extract_assets::<Asset>(&base_path)?;
     }
 
     Ok(())
