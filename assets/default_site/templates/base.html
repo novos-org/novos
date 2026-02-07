@@ -4,13 +4,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ site_title }}{% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ base_url }}/css/solarnight.css">
-    <script type="module" src="{{ base_url }}/js/app.js" defer></script>
+    <title>{{ config.site.title }}{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ config.base_url }}/css/solarnight.css">
+    <script type="module" src="{{ config.base_url }}/js/app.js" defer></script>
 </head>
 <body>
     <nav>
-        <a href="{{ base_url }}/">Home</a>
+        <a href="{{ config.base_url }}/">Home</a>
     {{ ui::search_bar() }}
     </nav>
    {{ ui::theme_button(text="Switch Appearance") }}

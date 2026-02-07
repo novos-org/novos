@@ -6,20 +6,24 @@
 //! 
 //! It also includes an asset optimization pipeline that converts images to WebP
 //! and rewrites internal HTML/CSS references to use the new extensions.
+//!
+//! NEW: Includes global data ingestion from `data/` and enhanced Tera context
+//! for flexible post listing and structure.
 
 use crate::{config::Config, parser, rss, models::Post};
 use rayon::prelude::*;
-use serde_json::json;
+use serde_json::{json, Value};
 use minify_html::{minify, Cfg};
 use std::{
     fs, io,
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Instant, SystemTime},
 };
 
 // Syntect imports for the build engine
-use syntect::highlighting::ThemeSet;
+use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 // Image and Regex support
@@ -44,9 +48,6 @@ const LIVE_RELOAD_SCRIPT: &str = r#"
 "#;
 
 /// Helper to minify HTML strings and optionally inject dev scripts.
-/// 
-/// If `is_dev` is true, the `LIVE_RELOAD_SCRIPT` is injected before the closing
-/// `</body>` tag or at the end of the file.
 fn process_html(mut html: String, should_minify: bool, is_dev: bool) -> String {
     if is_dev {
         if let Some(pos) = html.find("</body>") {
@@ -85,13 +86,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
 }
 
 /// Rewrites image references (`.png`, `.jpg`, `.jpeg`) to `.webp`.
-/// 
-/// It targets URLs inside quotes, parentheses, or whitespace. It includes a 
-/// negative lookahead to exclude external domains unless they match the 
-/// provided `base_url`.
 fn rewrite_to_webp(content: String, base_url: &str) -> String {
-    // 1. A simpler regex that just finds potential image paths.
-    // It captures the delimiter, the path, and the trailing delimiter.
     let file_re = Regex::new(
         r#"(?i)(["'\(\s])([^"'\)\s?#]+\.)(?:png|jpe?g)(["'\)\s])"#
     ).unwrap();
@@ -101,28 +96,21 @@ fn rewrite_to_webp(content: String, base_url: &str) -> String {
         let path = &caps[2];
         let post = &caps[3];
 
-        // LOGIC: Only replace if it's a relative path OR starts with our base_url
-        // We check if it contains "://" to detect external protocols
         let is_external = path.contains("://") || path.starts_with("//");
         let is_our_domain = path.starts_with(base_url);
 
         if !is_external || is_our_domain {
             format!("{}{}webp{}", pre, path, post)
         } else {
-            // It's a third-party link, return it unchanged
             caps[0].to_string()
         }
     }).into_owned();
 
-    // 2. Swap the MIME types 
     let mime_re = Regex::new(r#"(?i)image/(?:png|jpeg)"#).unwrap();
     mime_re.replace_all(&content, "image/webp").into_owned()
 }
 
 /// Processes images in the output directory, converting them to WebP.
-/// 
-/// This function runs in parallel using `rayon` for performance. It converts
-/// images with a quality factor of 75.0 and removes the original source files.
 fn process_images(config: &Config, verbose: bool) -> io::Result<()> {
     let output_dir = &config.output_dir;
     
@@ -159,9 +147,6 @@ fn process_images(config: &Config, verbose: bool) -> io::Result<()> {
 }
 
 /// Compiles SCSS/SASS files to CSS.
-/// 
-/// If `convert_to_webp` is enabled in the config, it will also process the 
-/// resulting CSS to update background-image URLs and other asset references.
 pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     let sass_dir = Path::new("sass");
     if !sass_dir.exists() {
@@ -212,13 +197,33 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     Ok(())
 }
 
+/// New: Ingests all files from the `data/` directory into a JSON Value.
+fn load_data_dir() -> Value {
+    let mut data_map = serde_json::Map::new();
+    let data_path = Path::new("data");
+
+    if data_path.exists() {
+        if let Ok(entries) = fs::read_dir(data_path) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                    let stem = path.file_stem().unwrap().to_str().unwrap().to_string();
+                    let content = fs::read_to_string(&path).unwrap_or_default();
+
+                    let val: Value = match ext {
+                        "toml" => toml::from_str(&content).unwrap_or(json!({})),
+                        "json" => serde_json::from_str(&content).unwrap_or(json!({})),
+                        _ => continue,
+                    };
+                    data_map.insert(stem, val);
+                }
+            }
+        }
+    }
+    Value::Object(data_map)
+}
+
 /// The primary entry point for the `novos` build process.
-/// 
-/// This orchestrates the four main steps:
-/// 1. Static asset migration and image optimization.
-/// 2. Sass compilation.
-/// 3. Content parsing (Frontmatter/Markdown).
-/// 4. Final HTML rendering via Tera templates.
 pub fn perform_build(
     config: &Config,
     last_run_mu: Arc<Mutex<SystemTime>>,
@@ -243,6 +248,9 @@ pub fn perform_build(
             .cloned()
             .unwrap_or_else(|| ts.themes.get("base16-ocean.dark").unwrap().clone())
     };
+
+    // New: Load site-wide data
+    let global_data = load_data_dir();
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
@@ -294,6 +302,7 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
+    // Keep the legacy string for backward compatibility with existing templates
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
         let link_path = if config.posts_outdir.is_empty() {
@@ -312,15 +321,23 @@ pub fn perform_build(
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
             let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
-            let rendered = parser::render_template(&tera, "post.html", p, config, &posts_html, &body);
             
-            let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
-            
-            if config.build.convert_to_webp {
-                final_html = rewrite_to_webp(final_html, &config.base_url);
-            }
+            // Refactored to pass raw objects for flexible structure
+            let mut context = tera::Context::new();
+            context.insert("post", p);
+            context.insert("posts", &posts);
+            context.insert("data", &global_data);
+            context.insert("config", config);
+            context.insert("posts_html", &posts_html);
+            context.insert("content", &body);
 
-            fs::write(dest, final_html).ok();
+            if let Ok(rendered) = tera.render("post.html", &context) {
+                let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+                if config.build.convert_to_webp {
+                    final_html = rewrite_to_webp(final_html, &config.base_url);
+                }
+                fs::write(dest, final_html).ok();
+            }
         }
     });
 
@@ -354,36 +371,48 @@ pub fn perform_build(
                     pd.raw_content.clone()
                 };
 
-                let rendered = parser::render_template(&tera, "page.html", &pd, config, &posts_html, &body);
-                let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+                let mut context = tera::Context::new();
+                context.insert("page", &pd);
+                context.insert("posts", &posts);
+                context.insert("data", &global_data);
+                context.insert("config", config);
+                context.insert("posts_html", &posts_html);
+                context.insert("content", &body);
 
-                if config.build.convert_to_webp {
-                    final_html = rewrite_to_webp(final_html, &config.base_url);
+                if let Ok(rendered) = tera.render("page.html", &context) {
+                    let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+                    if config.build.convert_to_webp {
+                        final_html = rewrite_to_webp(final_html, &config.base_url);
+                    }
+                    fs::write(config.output_dir.join(format!("{}.html", slug)), final_html).ok();
                 }
-
-                fs::write(config.output_dir.join(format!("{}.html", slug)), final_html).ok();
             }
         });
     }
 
-    let index_meta = Post {
-        slug: "index".to_string(),
-        title: config.site.title.clone(),
-        date: "".to_string(),
-        tags: vec![],
-        raw_content: String::new(),
-        mtime: SystemTime::now(),
-    };
+// --- Final Index Render ---
+    let mut idx_ctx = tera::Context::new();
     
-    let index_page = parser::render_template(&tera, "index.html", &index_meta, config, &posts_html, "");
-    let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
+    // We provide BOTH so your old and new template styles both work
+    idx_ctx.insert("posts", &posts);       // For: {% for post in posts %}
+    idx_ctx.insert("posts_html", &posts_html); // For: {{ posts_html | safe }}
+    idx_ctx.insert("data", &global_data);
+    idx_ctx.insert("config", config);
     
-    if config.build.convert_to_webp {
-        final_index = rewrite_to_webp(final_index, &config.base_url);
+    match tera.render("index.html", &idx_ctx) {
+        Ok(index_page) => {
+            let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
+            if config.build.convert_to_webp {
+                final_index = rewrite_to_webp(final_index, &config.base_url);
+            }
+            fs::write(config.output_dir.join("index.html"), final_index)?;
+        },
+        Err(e) => {
+            // This will tell you EXACTLY what line in your HTML is broken
+            eprintln!("\x1b[31mError rendering index.html:\x1b[0m {}", e);
+        }
     }
-
-    fs::write(config.output_dir.join("index.html"), final_index)?;
-
+    
     if let Ok(mut lr_lock) = last_run_mu.lock() {
         *lr_lock = SystemTime::now();
     }
