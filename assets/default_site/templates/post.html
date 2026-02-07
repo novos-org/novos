@@ -5,7 +5,7 @@
 {% block content %}
     <article>
         <h1>{{ post.title }}</h1>
-        <time>Published on: {{ post.date }}</time>
+        <time>Published on: {{ post.date | date(format=%B %d, %Y) }}</time>
         
         <div class="tags">
 	  <small>Tags: </small>

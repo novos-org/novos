@@ -10,9 +10,9 @@
         <h2>Recent Posts</h2>
             {% for post in posts %}
             <article class="post-card">
-              <h4><a href="{{ config.base }}{{ config.posts_outdir }}/{{ post.slug }}.html">{{ post.title }}</a></h4>
+              <h4><a href="{{ config.base_url }}/{{ config.posts_outdir }}/{{ post.slug }}.html">{{ post.title }}</a></h4>
               <div style="text-align: center;">
-             <small>Publised on: {{ post.date }}</small>
+             <small>Publised on: {{ post.date | date(format=%B %d, %Y ) }}</small>
              </div>
 
                 <div style="text-align: center;" class="tags">
