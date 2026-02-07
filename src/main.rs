@@ -188,13 +188,14 @@ fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
 
     // Initial Defaults
     let mut url = "https://example.com".to_string();
-    let mut title = "new novos site".to_string();
+    let mut title = "novos site".to_string();
     let mut author = "admin".to_string();
     let mut use_sass = true;
     let mut use_syntect = true;
     let mut gen_search = true;
     let mut gen_rss = true;
     let mut clean_out = true;
+    let mut convert_to_webp = false;
     let mut minify = false;
 
     // --- Interactive Prompts ---
@@ -202,21 +203,27 @@ fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
         url = prompt_input("What is the URL of your site?", &url)?;
         title = prompt_input("Site Title", &title)?;
         author = prompt_input("Author Name", &author)?;
+        // FIXED: Correctly assign to convert_to_webp
+        convert_to_webp = prompt_confirm("Do you want to convert image assets to WebP?", true)?;
+        // FIXED: Renamed 'use_' to 'use_sass'
         use_sass = prompt_confirm("Do you want to enable Sass compilation?", true)?;
         use_syntect = prompt_confirm("Do you want to enable syntax highlighting?", true)?;
         gen_search = prompt_confirm("Do you want to build a search index?", true)?;
         gen_rss = prompt_confirm("Do you want to generate an RSS feed?", true)?;
         clean_out = prompt_confirm("Clean output directory before build?", true)?;
-        minify = prompt_confirm("Minify HTML output?", false)?;
+        minify = prompt_confirm("Minify HTML output?", true)?;
     } else {
         use_sass = false;
         use_syntect = false;
         gen_search = false;
         gen_rss = false;
+        convert_to_webp = false;
     }
 
     println!("\n\x1b[2m[1/2]\x1b[0m Generating novos.toml...");
 
+    // Optimization: If sass is disabled, we might want to default to expanded 
+    // or just leave it, but 'compressed' is a good default for prod.
     let sass_style = if use_sass { "compressed" } else { "expanded" };
 
     let toml_content = format!(
@@ -243,6 +250,7 @@ generate_search = {gen_search}
 [build]
 clean_output = {clean_out}
 minify_html = {minify}
+convert_to_webp = {convert_to_webp}
 syntax_theme = "base16-ocean.dark"
 use_syntect = {use_syntect}
 sass_style = "{sass_style}"
