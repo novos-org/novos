@@ -228,7 +228,6 @@ fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
 
     let toml_content = format!(
         r#"base_url = "{url}"
-base = ""
 
 posts_dir    = "./posts"
 static_dir   = "./static"

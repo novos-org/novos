@@ -1,5 +1,4 @@
 base_url = "http://localhost:8080"
-base = ""
 
 posts_dir    = "./posts"
 static_dir   = "./static"
