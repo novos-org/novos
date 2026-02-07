@@ -20,3 +20,8 @@ convert_to_webp = true
 syntax_theme = "base16-ocean.dark"
 use_syntect = true
 sass_style = "compressed"
+
+[taxonomies]
+# Format: name = "slug"
+tags = "tags"
+categories = "categories"
