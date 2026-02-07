@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %} - {{ post.title }}{% endblock %}
+
+{% block content %}
+    <article>
+        <h1>{{ post.title }}</h1>
+        <time>Published on: {{ post.date }}</time>
+        
+        <div class="tags">
+	  <small>Tags: </small>
+            {% for tag in post.tags %}
+                <span class="tag"> #{{ tag }} </span>
+            {% endfor %}
+        </div>
+
+        <hr>
+
+        <div class="post-body">
+            {{ content }}
+        </div>
+    </article>
+{% endblock content %}
