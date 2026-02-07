@@ -113,7 +113,11 @@ pub struct BuildSettings {
     /// Path to a custom .tmTheme file.
     pub syntax_theme_path: Option<PathBuf>,
 
-    /// Optional directory containing custom .sublime-syntax files.
+    /// Convert images to WebP
+    #[serde(default = "default_bool_false")]
+    pub convert_to_webp: bool,
+
+/// Optional directory containing custom .sublime-syntax files.
     pub custom_syntax_dir: Option<PathBuf>,
 }
 

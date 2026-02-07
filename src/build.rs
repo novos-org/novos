@@ -3,6 +3,9 @@
 //! This module handles the orchestration of the static site generation process,
 //! including asset copying, Sass compilation via `grass`, Markdown processing
 //! via `pulldown-cmark`, and search index generation.
+//! 
+//! It also includes an asset optimization pipeline that converts images to WebP
+//! and rewrites internal HTML/CSS references to use the new extensions.
 
 use crate::{config::Config, parser, rss, models::Post};
 use rayon::prelude::*;
@@ -10,7 +13,7 @@ use serde_json::json;
 use minify_html::{minify, Cfg};
 use std::{
     fs, io,
-    path::{Path},
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Instant, SystemTime},
 };
@@ -18,6 +21,11 @@ use std::{
 // Syntect imports for the build engine
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
+
+// Image and Regex support
+use image::GenericImageView;
+use webp::Encoder;
+use regex::Regex;
 
 /// The WebSocket script injected during `novos serve` to enable live reloading.
 const LIVE_RELOAD_SCRIPT: &str = r#"
@@ -36,8 +44,10 @@ const LIVE_RELOAD_SCRIPT: &str = r#"
 "#;
 
 /// Helper to minify HTML strings and optionally inject dev scripts.
+/// 
+/// If `is_dev` is true, the `LIVE_RELOAD_SCRIPT` is injected before the closing
+/// `</body>` tag or at the end of the file.
 fn process_html(mut html: String, should_minify: bool, is_dev: bool) -> String {
-    // Inject Live Reload script before minification if in dev mode
     if is_dev {
         if let Some(pos) = html.find("</body>") {
             html.insert_str(pos, LIVE_RELOAD_SCRIPT);
@@ -74,7 +84,84 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> 
     Ok(())
 }
 
-/// Compiles SCSS/SASS files located in the `sass/` directory using the `grass` crate.
+/// Rewrites image references (`.png`, `.jpg`, `.jpeg`) to `.webp`.
+/// 
+/// It targets URLs inside quotes, parentheses, or whitespace. It includes a 
+/// negative lookahead to exclude external domains unless they match the 
+/// provided `base_url`.
+fn rewrite_to_webp(content: String, base_url: &str) -> String {
+    // 1. A simpler regex that just finds potential image paths.
+    // It captures the delimiter, the path, and the trailing delimiter.
+    let file_re = Regex::new(
+        r#"(?i)(["'\(\s])([^"'\)\s?#]+\.)(?:png|jpe?g)(["'\)\s])"#
+    ).unwrap();
+
+    let content = file_re.replace_all(&content, |caps: &regex::Captures| {
+        let pre = &caps[1];
+        let path = &caps[2];
+        let post = &caps[3];
+
+        // LOGIC: Only replace if it's a relative path OR starts with our base_url
+        // We check if it contains "://" to detect external protocols
+        let is_external = path.contains("://") || path.starts_with("//");
+        let is_our_domain = path.starts_with(base_url);
+
+        if !is_external || is_our_domain {
+            format!("{}{}webp{}", pre, path, post)
+        } else {
+            // It's a third-party link, return it unchanged
+            caps[0].to_string()
+        }
+    }).into_owned();
+
+    // 2. Swap the MIME types 
+    let mime_re = Regex::new(r#"(?i)image/(?:png|jpeg)"#).unwrap();
+    mime_re.replace_all(&content, "image/webp").into_owned()
+}
+
+/// Processes images in the output directory, converting them to WebP.
+/// 
+/// This function runs in parallel using `rayon` for performance. It converts
+/// images with a quality factor of 75.0 and removes the original source files.
+fn process_images(config: &Config, verbose: bool) -> io::Result<()> {
+    let output_dir = &config.output_dir;
+    
+    let mut image_paths = Vec::new();
+    let walker = walkdir::WalkDir::new(output_dir);
+    for entry in walker.into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            let ext_lower = ext.to_lowercase();
+            if ["jpg", "jpeg", "png"].contains(&ext_lower.as_str()) {
+                image_paths.push(path.to_path_buf());
+            }
+        }
+    }
+
+    image_paths.into_par_iter().for_each(|path| {
+        if let Ok(img) = image::open(&path) {
+            let encoder = Encoder::from_image(&img).unwrap();
+            let webp_data = encoder.encode(75.0); 
+            
+            let mut webp_path = path.clone();
+            webp_path.set_extension("webp");
+            
+            if fs::write(&webp_path, &*webp_data).is_ok() {
+                if verbose {
+                    println!("\x1b[2m  optimized\x1b[0m {}", path.file_name().unwrap().to_str().unwrap());
+                }
+                let _ = fs::remove_file(path);
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Compiles SCSS/SASS files to CSS.
+/// 
+/// If `convert_to_webp` is enabled in the config, it will also process the 
+/// resulting CSS to update background-image URLs and other asset references.
 pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     let sass_dir = Path::new("sass");
     if !sass_dir.exists() {
@@ -106,9 +193,14 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
             }
 
             match grass::from_path(&path, &options) {
-                Ok(css) => {
+                Ok(mut css) => {
                     let mut out_path = css_dir.join(file_name);
                     out_path.set_extension("css");
+                    
+                    if config.build.convert_to_webp {
+                        css = rewrite_to_webp(css, &config.base_url);
+                    }
+
                     fs::write(out_path, css)?;
                 }
                 Err(e) => {
@@ -121,6 +213,12 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
 }
 
 /// The primary entry point for the `novos` build process.
+/// 
+/// This orchestrates the four main steps:
+/// 1. Static asset migration and image optimization.
+/// 2. Sass compilation.
+/// 3. Content parsing (Frontmatter/Markdown).
+/// 4. Final HTML rendering via Tera templates.
 pub fn perform_build(
     config: &Config,
     last_run_mu: Arc<Mutex<SystemTime>>,
@@ -160,6 +258,12 @@ pub fn perform_build(
 
     if config.static_dir.exists() {
         copy_dir_all(&config.static_dir, &config.output_dir)?;
+    }
+
+    // Step 1.5: WebP Conversion
+    if config.build.convert_to_webp {
+        if verbose { println!("\x1b[2m[1.5/4]\x1b[0m Optimizing images..."); }
+        process_images(config, verbose)?;
     }
 
     // Step 2: Stylesheets
@@ -210,7 +314,12 @@ pub fn perform_build(
             let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
             let rendered = parser::render_template(&tera, "post.html", p, config, &posts_html, &body);
             
-            let final_html = process_html(rendered, config.build.minify_html, is_dev);
+            let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+            
+            if config.build.convert_to_webp {
+                final_html = rewrite_to_webp(final_html, &config.base_url);
+            }
+
             fs::write(dest, final_html).ok();
         }
     });
@@ -246,7 +355,12 @@ pub fn perform_build(
                 };
 
                 let rendered = parser::render_template(&tera, "page.html", &pd, config, &posts_html, &body);
-                let final_html = process_html(rendered, config.build.minify_html, is_dev);
+                let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+
+                if config.build.convert_to_webp {
+                    final_html = rewrite_to_webp(final_html, &config.base_url);
+                }
+
                 fs::write(config.output_dir.join(format!("{}.html", slug)), final_html).ok();
             }
         });
@@ -262,7 +376,12 @@ pub fn perform_build(
     };
     
     let index_page = parser::render_template(&tera, "index.html", &index_meta, config, &posts_html, "");
-    let final_index = process_html(index_page, config.build.minify_html, is_dev);
+    let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
+    
+    if config.build.convert_to_webp {
+        final_index = rewrite_to_webp(final_index, &config.base_url);
+    }
+
     fs::write(config.output_dir.join("index.html"), final_index)?;
 
     if let Ok(mut lr_lock) = last_run_mu.lock() {
