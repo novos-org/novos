@@ -1,27 +1,23 @@
-base_url = "https://localhost:8080"
+base_url = "http://localhost:8080"
 base = ""
 
-posts_dir   = "./posts"
-static_dir  = "./static"
-output_dir  = "./.build"
+posts_dir    = "./posts"
+static_dir   = "./static"
+output_dir   = "./.build"
 posts_outdir = "posts/"
+theme = "solarnight"
 
 [site]
-title = "novos example"
+title = "novos site"
 description = "A fast, minimal static site generated with Rust."
-author = "Your Name"
+author = "admin"
 generate_rss = true
 generate_search = true
 
 [build]
-# If true, wipes the .build folder every time (recommended for prod)
 clean_output = true
-
-# syntax_theme = "InspiredGitHub"
-syntax_theme_path = "static/themes/solarnight.tmTheme"
+minify_html = true
+convert_to_webp = true
+syntax_theme = "base16-ocean.dark"
 use_syntect = true
-minify_html = false
-convert_to_webp = false
-
-# Options: "expanded" or "compressed"
 sass_style = "compressed"

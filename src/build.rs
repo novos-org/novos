@@ -9,6 +9,9 @@
 //!
 //! NEW: Includes global data ingestion from `data/` and enhanced Tera context
 //! for flexible post listing and structure.
+//!
+//! THEME SYSTEM: Assets and templates are resolved by checking the project root
+//! first, then falling back to the active theme directory.
 
 use crate::{config::Config, parser, rss, models::Post};
 use rayon::prelude::*;
@@ -16,18 +19,16 @@ use serde_json::{json, Value};
 use minify_html::{minify, Cfg};
 use std::{
     fs, io,
-    collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::{Instant, SystemTime},
 };
 
 // Syntect imports for the build engine
-use syntect::highlighting::{Theme, ThemeSet};
+use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 
 // Image and Regex support
-use image::GenericImageView;
 use webp::Encoder;
 use regex::Regex;
 
@@ -46,6 +47,21 @@ const LIVE_RELOAD_SCRIPT: &str = r#"
     })();
 </script>
 "#;
+
+/// Helper to resolve a path by checking the project first, then falling back to the theme.
+fn resolve_path(relative_path: &str, theme_dir: &Option<PathBuf>) -> PathBuf {
+    let project_path = Path::new(relative_path);
+    if project_path.exists() {
+        return project_path.to_path_buf();
+    }
+    if let Some(t_dir) = theme_dir {
+        let theme_path = t_dir.join(relative_path);
+        if theme_path.exists() {
+            return theme_path;
+        }
+    }
+    project_path.to_path_buf()
+}
 
 /// Helper to minify HTML strings and optionally inject dev scripts.
 fn process_html(mut html: String, should_minify: bool, is_dev: bool) -> String {
@@ -146,9 +162,9 @@ fn process_images(config: &Config, verbose: bool) -> io::Result<()> {
     Ok(())
 }
 
-/// Compiles SCSS/SASS files to CSS.
-pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
-    let sass_dir = Path::new("sass");
+/// Compiles SCSS/SASS files to CSS, supporting theme fallbacks.
+pub fn compile_sass(config: &Config, theme_dir: &Option<PathBuf>, verbose: bool) -> io::Result<()> {
+    let sass_dir = resolve_path("sass", theme_dir);
     if !sass_dir.exists() {
         return Ok(());
     }
@@ -160,7 +176,11 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
         "compressed" => grass::OutputStyle::Compressed,
         _ => grass::OutputStyle::Expanded,
     };
-    let options = grass::Options::default().style(style);
+    
+    let mut options = grass::Options::default().style(style);
+    if let Some(td) = theme_dir {
+        options = options.load_path(td.join("sass"));
+    }
 
     for entry in fs::read_dir(sass_dir)? {
         let entry = entry?;
@@ -197,25 +217,31 @@ pub fn compile_sass(config: &Config, verbose: bool) -> io::Result<()> {
     Ok(())
 }
 
-/// New: Ingests all files from the `data/` directory into a JSON Value.
-fn load_data_dir() -> Value {
+/// Ingests all files from the `data/` directory (Theme + Project) into a JSON Value.
+fn load_data_dir(theme_dir: &Option<PathBuf>) -> Value {
     let mut data_map = serde_json::Map::new();
-    let data_path = Path::new("data");
+    
+    let data_sources = [
+        theme_dir.as_ref().map(|d| d.join("data")),
+        Some(PathBuf::from("data")),
+    ];
 
-    if data_path.exists() {
-        if let Ok(entries) = fs::read_dir(data_path) {
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-                    let stem = path.file_stem().unwrap().to_str().unwrap().to_string();
-                    let content = fs::read_to_string(&path).unwrap_or_default();
+    for path in data_sources.into_iter().flatten() {
+        if path.exists() {
+            if let Ok(entries) = fs::read_dir(path) {
+                for entry in entries.filter_map(|e| e.ok()) {
+                    let p = entry.path();
+                    if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
+                        let stem = p.file_stem().unwrap().to_str().unwrap().to_string();
+                        let content = fs::read_to_string(&p).unwrap_or_default();
 
-                    let val: Value = match ext {
-                        "toml" => toml::from_str(&content).unwrap_or(json!({})),
-                        "json" => serde_json::from_str(&content).unwrap_or(json!({})),
-                        _ => continue,
-                    };
-                    data_map.insert(stem, val);
+                        let val: Value = match ext {
+                            "toml" => toml::from_str(&content).unwrap_or(json!({})),
+                            "json" => serde_json::from_str(&content).unwrap_or(json!({})),
+                            _ => continue,
+                        };
+                        data_map.insert(stem, val);
+                    }
                 }
             }
         }
@@ -233,14 +259,27 @@ pub fn perform_build(
     let start = Instant::now();
     let lr = *last_run_mu.lock().unwrap();
 
-    let tera = parser::init_tera("templates");
+    let theme_dir = config.theme.as_ref().map(|t| PathBuf::from("themes").join(t));
+
+    // Step 0: Initialize Tera with Layered Templates
+    let mut tera = parser::init_tera("templates"); 
+    if let Some(td) = &theme_dir {
+        let theme_templates_glob = td.join("templates/**/*");
+        if let Some(glob_str) = theme_templates_glob.to_str() {
+            if let Ok(theme_tera) = tera::Tera::new(glob_str) {
+                // Use .extend() to merge theme templates as base
+                tera.extend(&theme_tera).ok();
+            }
+        }
+    }
+
     let ps = SyntaxSet::load_defaults_newlines();
     
-    let theme = if let Some(ref custom_path) = config.build.syntax_theme_path {
+    let theme = if let Some(custom_path) = &config.build.syntax_theme_path {
         let theme_data = fs::read_to_string(custom_path)
             .map_err(|e| io::Error::new(io::ErrorKind::NotFound, format!("Theme file not found: {}", e)))?;
         let mut cursor = io::Cursor::new(theme_data);
-        syntect::highlighting::ThemeSet::load_from_reader(&mut cursor)
+        ThemeSet::load_from_reader(&mut cursor)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse .tmTheme"))?
     } else {
         let ts = ThemeSet::load_defaults();
@@ -249,8 +288,7 @@ pub fn perform_build(
             .unwrap_or_else(|| ts.themes.get("base16-ocean.dark").unwrap().clone())
     };
 
-    // New: Load site-wide data
-    let global_data = load_data_dir();
+    let global_data = load_data_dir(&theme_dir);
 
     // Step 1: Cleaning and Static Assets
     if config.build.clean_output {
@@ -264,21 +302,25 @@ pub fn perform_build(
     let posts_out_path = config.output_dir.join(&config.posts_outdir);
     fs::create_dir_all(&posts_out_path)?;
 
+    // Layered Static Assets
+    if let Some(td) = &theme_dir {
+        let theme_static = td.join("static");
+        if theme_static.exists() {
+            copy_dir_all(theme_static, &config.output_dir)?;
+        }
+    }
     if config.static_dir.exists() {
         copy_dir_all(&config.static_dir, &config.output_dir)?;
     }
 
-    // Step 1.5: WebP Conversion
     if config.build.convert_to_webp {
         if verbose { println!("\x1b[2m[1.5/4]\x1b[0m Optimizing images..."); }
         process_images(config, verbose)?;
     }
 
-    // Step 2: Stylesheets
     if verbose { println!("\x1b[2m[2/4]\x1b[0m Compiling stylesheets..."); }
-    compile_sass(config, verbose)?;
+    compile_sass(config, &theme_dir, verbose)?;
 
-    // Step 3: Content Collection
     if verbose { println!("\x1b[2m[3/4]\x1b[0m Processing content..."); }
     
     let mut post_paths = Vec::new();
@@ -302,7 +344,6 @@ pub fn perform_build(
 
     posts.sort_by(|a, b| b.date.cmp(&a.date));
 
-    // Keep the legacy string for backward compatibility with existing templates
     let mut posts_html = String::from("<ul class='post-list'>\n");
     for p in &posts {
         let link_path = if config.posts_outdir.is_empty() {
@@ -314,7 +355,6 @@ pub fn perform_build(
     }
     posts_html.push_str("</ul>");
 
-    // Step 4: Rendering
     if verbose { println!("\x1b[2m[4/4]\x1b[0m Rendering pages..."); }
 
     posts.par_iter().for_each(|p| {
@@ -322,7 +362,6 @@ pub fn perform_build(
         if p.mtime > lr || !dest.exists() {
             let body = parser::render_markdown(&p.raw_content, config.build.use_syntect, &ps, &theme);
             
-            // Refactored to pass raw objects for flexible structure
             let mut context = tera::Context::new();
             context.insert("post", p);
             context.insert("posts", &posts);
@@ -390,12 +429,9 @@ pub fn perform_build(
         });
     }
 
-// --- Final Index Render ---
     let mut idx_ctx = tera::Context::new();
-    
-    // We provide BOTH so your old and new template styles both work
-    idx_ctx.insert("posts", &posts);       // For: {% for post in posts %}
-    idx_ctx.insert("posts_html", &posts_html); // For: {{ posts_html | safe }}
+    idx_ctx.insert("posts", &posts);
+    idx_ctx.insert("posts_html", &posts_html);
     idx_ctx.insert("data", &global_data);
     idx_ctx.insert("config", config);
     
@@ -408,9 +444,8 @@ pub fn perform_build(
             fs::write(config.output_dir.join("index.html"), final_index)?;
         },
         Err(e) => {
-            // This will tell you EXACTLY what line in your HTML is broken
-            eprintln!("\x1b[31mError rendering index.html:\x1b[0m {}", e);
-        }
+	eprintln!("\x1b[31mError rendering index.html:\x1b[0m {:?}", e);
+	}
     }
     
     if let Ok(mut lr_lock) = last_run_mu.lock() {

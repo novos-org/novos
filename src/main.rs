@@ -231,14 +231,10 @@ fn init_project(target_dir: &str, bare: bool) -> anyhow::Result<()> {
 base = ""
 
 posts_dir    = "./posts"
-pages_dir    = "./pages"
 static_dir   = "./static"
 output_dir   = "./.build"
 posts_outdir = "posts/"
-
-template_path      = "./index.html"
-includes_dir       = "./includes"
-view_template_path = "./includes/view_template.html"
+theme = "solarnight"
 
 [site]
 title = "{title}"

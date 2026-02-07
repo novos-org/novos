@@ -11,7 +11,7 @@ use std::path::PathBuf;
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     // --- Directory Settings ---
-    
+    pub theme: Option<String>,
     /// Directory containing blog post Markdown files. Default: `./posts`
     #[serde(default = "default_posts")] 
     pub posts_dir: PathBuf,

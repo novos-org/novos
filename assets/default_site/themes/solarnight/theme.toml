@@ -1,0 +1,19 @@
+[theme]
+name = "solarnight"
+author = "novos"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+description = "A clean, classy theme inspired by Rose Pine."
+
+[extra]
+show_avatar = true
+github_url = "https://github.com/novos-org"
+
+
+[build]
+syntax_theme_path = "static/themes/solarnight.tmTheme"
+
+[paths]
+sass_main = "sass/solarnight.scss"
+templates_dir = "templates"
+static_dir = "static"
