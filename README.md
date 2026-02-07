@@ -23,7 +23,6 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
 - **Sass transpilation** via native `grass` (no C++ or Node.js required)
 - **Fast Parallelism** utilizing `Rayon` for multi-core page generation
 - **Self-Contained** binary with embedded assets via `rust-embed`
-- **Shortcodes, Includes, & Variables** for flexible templating
 - **RSS** generation baked-in
 - **search.json**, so you can search
 - **syntect**, because who hates colors?
