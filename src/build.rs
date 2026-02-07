@@ -429,23 +429,62 @@ pub fn perform_build(
         });
     }
 
-    let mut idx_ctx = tera::Context::new();
-    idx_ctx.insert("posts", &posts);
-    idx_ctx.insert("posts_html", &posts_html);
-    idx_ctx.insert("data", &global_data);
-    idx_ctx.insert("config", config);
-    
-    match tera.render("index.html", &idx_ctx) {
-        Ok(index_page) => {
-            let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
-            if config.build.convert_to_webp {
-                final_index = rewrite_to_webp(final_index, &config.base_url);
+    // --- Index Rendering with Pagination Support ---
+    if config.site.paginate && config.site.posts_per_page > 0 {
+        let chunks: Vec<_> = posts.chunks(config.site.posts_per_page).collect();
+        let total_pages = chunks.len();
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            let current_page = i + 1;
+            let mut idx_ctx = tera::Context::new();
+            
+            idx_ctx.insert("posts", chunk);
+            idx_ctx.insert("total_pages", &total_pages);
+            idx_ctx.insert("current_page", &current_page);
+            idx_ctx.insert("has_prev", &(current_page > 1));
+            idx_ctx.insert("has_next", &(current_page < total_pages));
+            idx_ctx.insert("posts_html", &posts_html);
+            idx_ctx.insert("data", &global_data);
+            idx_ctx.insert("config", config);
+            
+            match tera.render("index.html", &idx_ctx) {
+                Ok(index_page) => {
+                    let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
+                    if config.build.convert_to_webp {
+                        final_index = rewrite_to_webp(final_index, &config.base_url);
+                    }
+                    
+                    let out_path = if current_page == 1 {
+                        config.output_dir.join("index.html")
+                    } else {
+                        let page_dir = config.output_dir.join("page").join(current_page.to_string());
+                        fs::create_dir_all(&page_dir)?;
+                        page_dir.join("index.html")
+                    };
+                    
+                    fs::write(out_path, final_index)?;
+                },
+                Err(e) => eprintln!("\x1b[31mError rendering index page {}:\x1b[0m {:?}", current_page, e),
             }
-            fs::write(config.output_dir.join("index.html"), final_index)?;
-        },
-        Err(e) => {
-	eprintln!("\x1b[31mError rendering index.html:\x1b[0m {:?}", e);
-	}
+        }
+    } else {
+        // Fallback for non-paginated index
+        let mut idx_ctx = tera::Context::new();
+        idx_ctx.insert("posts", &posts);
+        idx_ctx.insert("posts_html", &posts_html);
+        idx_ctx.insert("data", &global_data);
+        idx_ctx.insert("config", config);
+        
+        match tera.render("index.html", &idx_ctx) {
+            Ok(index_page) => {
+                let mut final_index = process_html(index_page, config.build.minify_html, is_dev);
+                if config.build.convert_to_webp {
+                    final_index = rewrite_to_webp(final_index, &config.base_url);
+                }
+                fs::write(config.output_dir.join("index.html"), final_index)?;
+            },
+            Err(e) => eprintln!("\x1b[31mError rendering index.html:\x1b[0m {:?}", e),
+        }
     }
     
     if let Ok(mut lr_lock) = last_run_mu.lock() {

@@ -1,0 +1,7 @@
+{% import "macros.html" as ui %}
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ config.site.title }}{% block title %}{% endblock %}</title>
+<link rel="stylesheet" href="{{ config.base_url }}/css/{{ config.theme }}.css">
+<script type="module" src="{{ config.base_url }}/js/app.js" defer></script>

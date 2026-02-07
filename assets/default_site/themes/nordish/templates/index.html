@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <section class="hero">
+        <h1>{{ config.site.title }}</h1>
+        <p>{{ config.site.description }}</p>
+    </section>
+
+    <section class="recent-posts">
+        <h2>Recent Posts</h2>
+            {% for post in posts %}
+            <article class="post-card">
+              <h4><a href="{{ config.base }}{{ config.posts_outdir }}/{{ post.slug }}.html">{{ post.title }}</a></h4>
+
+              <div style="text-align: center;" class="tags">
+                {% for tag in post.tags %}
+                <span class="tag"><small> #{{ tag }} </small></span>
+          {% endfor %}
+              </div>
+            </article>
+            {% endfor %}
+    </section>
+{% endblock content %}

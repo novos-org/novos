@@ -1,0 +1,65 @@
+/* --- 1. THEME ENGINE (Nord / Glassmorphism) --- */
+@mixin dark-colors {
+  /* Nord Dark Palette (Polar Night) */
+  --bg-top: #2e3440;        /* nord0 */
+  --bg-bottom: #3b4252;     /* nord1 */
+  --bg-body: #2e3440;      
+  
+  /* Frosty Glass Effects */
+  --glass-bg: rgba(46, 52, 64, 0.8);      /* nord0 with alpha */
+  --glass-border: rgba(143, 188, 187, 0.2); /* nord7 (aurora/frost) overlay */
+  
+  --bg-alt: #3b4252;        /* nord1 */
+  --bg-pre: #242933;        /* custom darker shade for contrast */
+  
+  /* Text and Accents (Snow Storm & Frost) */
+  --text-main: #d8dee9;     /* nord4 */
+  --text-headers: #eceff4;  /* nord6 */
+  --text-muted: #4c566a;    /* nord3 */
+  
+  --primary: #88c0d0;       /* nord8 (frosty blue) */
+  --primary-hover: #81a1c1;  /* nord9 */
+  
+  --border: #434c5e;        /* nord2 */
+  --input-bg: rgba(59, 66, 82, 0.6); /* nord1 */
+}
+
+:root {
+  /* Light Mode (Snow Storm) */
+  --bg-body: #eceff4;       /* nord6 */
+  --glass-bg: rgba(236, 239, 244, 0.7);
+  --glass-border: rgba(76, 86, 106, 0.1);
+  --bg-alt: #e5e9f0;        /* nord5 */
+  --bg-pre: #d8dee9;        /* nord4 */
+  --text-main: #2e3440;     /* nord0 */
+  --text-headers: #3b4252;  /* nord1 */
+  --text-muted: #4c566a;    /* nord3 */
+  --primary: #5e81ac;       /* nord10 (darker frost) */
+  --primary-hover: #81a1c1;  /* nord9 */
+  --border: rgba(76, 86, 106, 0.15);
+  --input-bg: rgba(255, 255, 255, 0.5);
+  --blur-amount: 14px;      /* Slightly higher blur for that "frozen window" look */
+
+  @media (prefers-color-scheme: dark) {
+    &:not([data-theme="light"]) {
+      @include dark-colors;
+    }
+  }
+}
+
+[data-theme="dark"] {
+  @include dark-colors;
+}
+/* --- 2. SASS BRIDGE --- */
+$primary: var(--primary);
+$primary-hover: var(--primary-hover);
+$text-main: var(--text-main);
+$text-dark: var(--text-muted); // Maps to Nord3
+$text-headers: var(--text-headers);
+$text-muted: var(--text-muted);
+$border-color: var(--border);
+$bg-gray: var(--bg-alt);
+$bg-body: var(--bg-body);
+
+// Added a specific Frost variable for Nord-specific highlights
+$frost: #8fbcbb;

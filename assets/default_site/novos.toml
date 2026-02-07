@@ -12,6 +12,8 @@ description = "A fast, minimal static site generated with Rust."
 author = "admin"
 generate_rss = true
 generate_search = true
+paginate = true
+posts_per_page = 5
 
 [build]
 clean_output = true
@@ -20,8 +22,3 @@ convert_to_webp = true
 syntax_theme = "base16-ocean.dark"
 use_syntect = true
 sass_style = "compressed"
-
-[taxonomies]
-# Format: name = "slug"
-tags = "tags"
-categories = "categories"

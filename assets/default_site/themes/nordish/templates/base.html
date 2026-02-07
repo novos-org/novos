@@ -1,0 +1,25 @@
+{% import "macros.html" as ui %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ config.site.title }}{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ config.base_url }}/css/solarnight.css">
+    <script type="module" src="{{ config.base_url }}/js/app.js" defer></script>
+</head>
+<body>
+    <nav>
+        <a href="{{ config.base_url }}/">Home</a>
+    {{ ui::search_bar() }}
+    </nav>
+   {{ ui::theme_button(text="Switch Appearance") }}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>Copyright {{ config.site.author }}</p>
+    </footer>
+</body>
+</html>

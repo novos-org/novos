@@ -241,6 +241,8 @@ description = "A fast, minimal static site generated with Rust."
 author = "{author}"
 generate_rss = {gen_rss}
 generate_search = {gen_search}
+paginate = true
+posts_per_page = 5
 
 [build]
 clean_output = {clean_out}

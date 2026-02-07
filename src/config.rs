@@ -83,8 +83,18 @@ pub struct SiteMetadata {
     pub generate_rss: bool,
 
     /// Whether to generate a `search.json` index for client-side search.
-    #[serde(default = "default_bool_true")]
+
     pub generate_search: bool,
+
+    #[serde(default = "default_bool_true")]
+     // --- Pagination ---
+    /// Toggle to enable/disable pagination for the post list.
+    #[serde(default = "default_bool_false")]
+    pub paginate: bool,
+
+    /// Number of posts to show per page if pagination is enabled.
+    #[serde(default = "default_posts_per_page")]
+    pub posts_per_page: usize,
 }
 
 /// Flags and options that tune the build process.
@@ -139,3 +149,4 @@ fn default_theme() -> String { "base16-ocean.dark".to_string() }
 
 fn default_bool_true() -> bool { true }
 fn default_bool_false() -> bool { false }
+fn default_posts_per_page() -> usize { 10 }

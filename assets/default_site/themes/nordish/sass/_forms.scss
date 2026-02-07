@@ -1,0 +1,45 @@
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="tel"], input[type="url"],
+textarea, select {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: var(--input-bg);
+  backdrop-filter: blur(4px);
+  transition: all 0.2s;
+
+  &:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    border-color: var(--primary);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 4px rgba(207, 253, 255, 0.1);
+  }
+}
+
+button, .button-primary {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: rgba(189, 206, 216, 0.25);
+  backdrop-filter: blur(4px);
+  color: var(--text-headers);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  font-weight: 500;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: var(--primary);
+    color: #000;
+  }
+  &:active { transform: translateY(1px); }
+}

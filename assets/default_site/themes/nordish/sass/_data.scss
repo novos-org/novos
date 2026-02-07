@@ -1,0 +1,58 @@
+code, pre {
+  font-family: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, Consolas, Liberation Mono, DejaVu Sans Mono, Courier New, monospace;
+}
+
+pre {
+  @include glass-panel;
+  position: relative;
+  padding: 12px 15px;
+  background: var(--bg-pre);
+  border-radius: 8px;
+  text-align: left;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-main);
+
+  .copy-code-button {
+    position: absolute;
+    top: 8px; right: 8px;
+    @include glass-panel;
+    padding: 4px 10px;
+    text-transform: lowercase;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    
+    &:hover {
+      background: var(--primary);
+      color: #000;
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    &:active { transform: translateY(0); }
+    &.active {
+      background: rgba(207, 253, 255, 0.1);
+      border-color: #bbbfff;
+    }
+  }
+
+  code {
+    display: block;
+    padding-right: 50px; 
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+}
