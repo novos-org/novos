@@ -66,7 +66,7 @@ Documentation is available at [docs/](./docs)
 ## Backend
 - **Language:** Rust (2024 Edition)
 - **Markdown:** `pulldown-cmark` (CommonMark compliant, yay!)
-- **License:** 3-Clause BSD
+- **License:** APACHE-2.0 OR MIT
 
 
 
