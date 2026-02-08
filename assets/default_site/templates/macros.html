@@ -1,0 +1,21 @@
+{% macro theme_button(text="Toggle Dark Mode", class="theme-toggle") %}
+  <button class="{{ class }}" onclick="toggleTheme()">
+    {{ text }}
+  </button>
+  {% endmacro theme_button %}
+
+
+{% macro search_bar(placeholder="posts") %}
+<div class="flex items-center gap-4">
+  <div class="search-area">
+    <input
+      type="text"
+      id="search-input"
+      placeholder="Search {{ placeholder }}..."
+      autocomplete="off"
+      aria-label="Search"
+    >
+    <div id="search-results" class="results-dropdown"></div>
+  </div>
+</div>
+{% endmacro search_bar %}
