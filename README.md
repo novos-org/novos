@@ -56,6 +56,8 @@ novos is a lightning-fast static site generator (SSG) built in Rust. It takes yo
   - Solarnight is a Rose Pine inspired theme. 
 - Nordish (themes/nordish)
   - Nordish is, well.... a Nord inspired theme.
+- Glub
+    - Glub is a theme partially inspired by GitLab.
 
 ## Documentation
 Documentation is available at [docs/](./docs)

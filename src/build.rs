@@ -17,7 +17,7 @@ use std::{
 };
 
 // High-performance syntax highlighting
-use syntect::highlighting::ThemeSet;
+use syntect::highlighting::{ThemeSet, Theme};
 use syntect::parsing::SyntaxSet;
 
 // Media processing and text manipulation
@@ -333,10 +333,28 @@ pub fn perform_build(
     if verbose { println!("\x1b[2m[3/5]\x1b[0m Processing content..."); }
     
     let ps = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let syntax_theme = ts.themes.get(&config.build.syntax_theme)
-        .cloned()
-        .unwrap_or_else(|| ts.themes.get("base16-ocean.dark").unwrap().clone());
+    
+    // Custom Syntax Theme Logic: 
+    // If syntax_theme_path is set, attempt to load that file.
+    // Otherwise, fallback to the internal ThemeSet.
+    let syntax_theme: Theme = if let Some(ref path_str) = config.build.syntax_theme_path {
+        let theme_path = Path::new(path_str);
+        if theme_path.exists() {
+            let mut reader = io::BufReader::new(fs::File::open(theme_path)?);
+            ThemeSet::load_from_reader(&mut reader)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to load custom theme: {}", e)))?
+        } else {
+            // Path provided but not found: Fallback to Ocean Dark
+            let ts = ThemeSet::load_defaults();
+            ts.themes.get("base16-ocean.dark").unwrap().clone()
+        }
+    } else {
+        // No path provided: Load from standard syntect defaults
+        let ts = ThemeSet::load_defaults();
+        ts.themes.get(&config.build.syntax_theme)
+            .cloned()
+            .unwrap_or_else(|| ts.themes.get("base16-ocean.dark").unwrap().clone())
+    };
 
     let global_data = load_data_dir(&theme_dir);
 
@@ -371,13 +389,10 @@ pub fn perform_build(
                 .push(post);
         }
     }
-// --- STEP 5: RENDERING ---
+
+    // --- STEP 5: RENDERING ---
     if verbose { println!("\x1b[2m[4/5]\x1b[0m Rendering posts and taxonomies..."); }
 
-    // [Detailed Comment: Post Rendering]
-    // We use .par_iter() to render every markdown post into an HTML file.
-    // Each post gets the full 'posts' list and 'taxonomies' map in its context,
-    // allowing for "Related Posts" or "Tag Cloud" features inside post.html.
     posts.par_iter().for_each(|p| {
         let dest = posts_out_path.join(format!("{}.html", p.slug));
         if p.mtime > lr || !dest.exists() {
@@ -385,7 +400,7 @@ pub fn perform_build(
             
             let mut context = tera::Context::new();
             context.insert("post", p);
-            context.insert("posts", &posts); // All posts for navigation
+            context.insert("posts", &posts); 
             context.insert("taxonomies", &taxonomies);
             context.insert("data", &global_data);
             context.insert("config", config);
@@ -401,24 +416,17 @@ pub fn perform_build(
         }
     });
 
-    // [Detailed Comment: Taxonomy Rendering]
-    // Here we create the tags pages. If you don't have a 'tag.html', we use 'index.html'.
-    // CRITICAL FIX: We pass the 'tagged_posts' as 'posts' so that the index template
-    // loops over the filtered list instead of the global post list.
     if !taxonomies.is_empty() {
         let tax_out_dir = config.output_dir.join("tags");
         fs::create_dir_all(&tax_out_dir)?;
 
         taxonomies.par_iter().for_each(|(tag, tagged_posts)| {
             let mut tax_ctx = tera::Context::new();
-            // We provide 'tag' so the template can display "Posts tagged with: Rust"
             tax_ctx.insert("tag", tag); 
-            // We overwrite 'posts' with ONLY the posts containing this tag
             tax_ctx.insert("posts", tagged_posts); 
             tax_ctx.insert("config", config);
             tax_ctx.insert("data", &global_data);
 
-            // Determine which template to use. Tera registry check ensures no crash.
             let template = if tera.get_template_names().any(|t| t == "tag.html") { 
                 "tag.html" 
             } else { 
@@ -427,7 +435,6 @@ pub fn perform_build(
             
             if let Ok(rendered) = tera.render(template, &tax_ctx) {
                 let final_html = process_html(rendered, config.build.minify_html, is_dev);
-                // Filenames are lowercased for URL consistency (e.g., tags/rust.html)
                 let dest = tax_out_dir.join(format!("{}.html", tag.to_lowercase()));
                 fs::write(dest, final_html).ok();
             }
@@ -437,9 +444,6 @@ pub fn perform_build(
     // --- STEP 6: INDEX & PAGINATION ---
     if verbose { println!("\x1b[2m[5/5]\x1b[0m Finalizing indices and metadata..."); }
 
-    // [Detailed Comment: The Pagination Engine]
-    // If pagination is enabled, we chunk the 'posts' vector.
-    // Each chunk becomes a separate index.html file in a numbered directory.
     if config.site.paginate && config.site.posts_per_page > 0 {
         let chunks: Vec<_> = posts.chunks(config.site.posts_per_page).collect();
         let total_pages = chunks.len();
@@ -448,7 +452,6 @@ pub fn perform_build(
             let current_page = i + 1;
             let mut idx_ctx = tera::Context::new();
             
-            // Context variables for the index template to handle "Next/Prev" links
             idx_ctx.insert("posts", chunk);
             idx_ctx.insert("total_pages", &total_pages);
             idx_ctx.insert("current_page", &current_page);
@@ -457,9 +460,6 @@ pub fn perform_build(
             idx_ctx.insert("data", &global_data);
             idx_ctx.insert("config", config);
             
-            // Map the output path:
-            // Page 1 -> /index.html
-            // Page 2 -> /page/2/index.html
             let out_path = if current_page == 1 {
                 config.output_dir.join("index.html")
             } else {
@@ -471,9 +471,6 @@ pub fn perform_build(
             render_index_file(&tera, &idx_ctx, out_path, config, is_dev)?;
         }
     } else {
-        // [Detailed Comment: Single Index Fallback]
-        // If pagination is OFF, we still need a homepage! 
-        // We render all posts to the root index.html.
         let mut idx_ctx = tera::Context::new();
         idx_ctx.insert("posts", &posts);
         idx_ctx.insert("data", &global_data);
@@ -482,6 +479,7 @@ pub fn perform_build(
         let out_path = config.output_dir.join("index.html");
         render_index_file(&tera, &idx_ctx, out_path, config, is_dev)?;
     }
+
     // --- STEP 7: EXTERNAL DISTRIBUTIONS ---
     if config.site.generate_rss {
         let rss_xml = rss::generate_rss(&posts, config);
@@ -503,7 +501,6 @@ pub fn perform_build(
         fs::write(config.output_dir.join("search.json"), serde_json::to_string(&search_index)?)?;
     }
 
-    // Update global build timestamp for the next run's differential check
     if let Ok(mut lr_lock) = last_run_mu.lock() {
         *lr_lock = SystemTime::now();
     }

@@ -1,0 +1,24 @@
+@for $i from 0 through 8 {
+  $val: $i * 4;
+  .m-#{$i} { margin: #{$val}px; }
+  .mt-#{$i} { margin-top: #{$val}px; }
+  .mb-#{$i} { margin-bottom: #{$val}px; }
+  .p-#{$i} { padding: #{$val}px; }
+  .py-#{$i} { padding-top: #{$val}px; padding-bottom: #{$val}px; }
+  .px-#{$i} { padding-left: #{$val}px; padding-right: #{$val}px; }
+  .gap-#{$i} { gap: #{$val}px; }
+}
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.hidden { display: none; }
+.text-primary { color: var(--primary); }
+.text-muted { color: var(--text-muted); }
+
+.center-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 300px;
+}
