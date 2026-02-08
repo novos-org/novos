@@ -1,4 +1,5 @@
 [package]
+# metadata
 name = "novos"
 version = "0.1.528"
 edition = "2024"
@@ -12,39 +13,72 @@ keywords = ["ssg", "static-site", "sass", "fast", "freebsd"]
 categories = ["command-line-utilities", "web-programming"]
 
 [profile.release]
+# release optimizations
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
 
-opt-level = 3          # Maximize speed
-lto = true             # Enable Link Time Optimization (huge for speed)
-codegen-units = 1      # Reduce parallel codegen for better optimization
-panic = 'abort'        # Remove stack unwinding (shrinks binary, slight speed boost)
-strip = true           # Automatically strip symbols (smaller binary)
-
-# The profile that 'dist' will build with
 [profile.dist]
+# distribution profile
 inherits = "release"
 lto = "thin"
 
 [dependencies]
+# markdown parsing
 pulldown-cmark = "0.13.0"
+
+# parallelism
 rayon = "1.11"
+
+# file watching
 notify = "6.1"
+
+# cli arguments
 clap = { version = "4.5", features = ["derive"] }
+
+# rss feeds
 rss = "2.0"
+
+# time handling
 chrono = "0.4"
+
+# serialization
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
-anyhow = "1.0.101"
-rust-embed = "8.11.0"
-console = "0.15"
-grass = "0.13"
 serde_json = "1.0.149"
+
+# error handling
+anyhow = "1.0.101"
+
+# embedded assets
+rust-embed = "8.11.0"
+
+# terminal output
+console = "0.15"
+
+# sass transpilation
+grass = "0.13"
+
+# syntax highlighting
 syntect = "5.3.0"
+
+# templating
 tera = "1.20.1"
+
+# minification
 minify-html = "0.18.1"
+
+# server and async
 axum = { version = "0.8.8", features = ["ws"] }
 tokio = { version = "1.49.0", features = ["full"] }
 tower-http = { version = "0.6.8", features = ["fs"] }
+
+# image processing
 image = "0.25.9"
 webp = "0.3.1"
+
+# utilities
 regex = "1.12.3"
 walkdir = "2.5.0"
