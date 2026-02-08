@@ -6,7 +6,6 @@ target_arch := `uname -m`
 default:
     @just --list
 
-# Build with conditional flags for SunOS/illumos
 build:
     #!/usr/bin/env bash
     if [ "$(uname -s)" = "SunOS" ]; then \
@@ -19,12 +18,16 @@ build:
     strip target/release/{{bin_name}}
 
 # Package the binary for release
-dist: build
-    @mkdir -p dist
-    @echo "Packaging {{bin_name}} v{{version}} for {{target_os}}..."
-    tar -cJvf dist/{{bin_name}}-{{target_arch}}-{{target_os}}.tar.xz -C target/release {{bin_name}}
-    cd dist && sha256sum {{bin_name}}-{{target_arch}}-{{target_os}}.tar.xz > {{bin_name}}-{{target_arch}}-{{target_os}}.tar.xz.sha256
-    @echo "Done! Check the dist/ folder."
+dist:
+    mkdir -p dist
+    echo "Packaging {{bin_name}} v{{version}} for {{target_os}}..."
+    NAME="{{bin_name}}-{{target_arch}}-{{target_os}}.tar.xz"; \
+    tar -cJvf dist/$NAME -C target/release {{bin_name}}; \
+    cd dist && \
+        sha256sum $NAME > $NAME.sha256 && \
+        sha512sum $NAME > $NAME.sha512 && \
+        b3sum      $NAME > $NAME.b3sum && \
+        sha1sum    $NAME > $NAME.sha1
 
 clean:
     cargo clean
