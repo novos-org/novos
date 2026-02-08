@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>novos | Editor-adm</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-lighter: #161b22;
+            --accent: #58a6ff;
+            --text-main: #c9d1d9;
+            --text-dim: #8b949e;
+            --border: #30363d;
+            --success: #238636;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: 280px;
+            background: var(--bg-lighter);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h3 { margin: 0; font-size: 1.1rem; color: var(--accent); }
+
+        #file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 10px 15px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-dim);
+        }
+
+        .file-item:hover { background: #21262d; color: var(--text-main); }
+        .file-item.active { background: #1f6feb; color: white; }
+
+        /* Main Editor Area */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+        }
+
+        #toolbar {
+            padding: 15px 25px;
+            background: var(--bg-lighter);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #current-file { font-family: monospace; font-size: 0.9rem; color: var(--text-dim); }
+
+        .btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .btn:hover { filter: brightness(1.1); }
+        .btn-new { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 4px 10px; }
+
+        /* SimpleMDE Overrides to match dark theme */
+        .CodeMirror { background: #0d1117 !important; color: #c9d1d9 !important; border: none !important; height: calc(100vh - 120px); }
+        .editor-toolbar { background: #161b22 !important; border: 1px solid var(--border) !important; opacity: 1 !important; }
+        .editor-toolbar a { color: #8b949e !important; }
+        .editor-toolbar a.active, .editor-toolbar a:hover { background: #30363d !important; border: none !important; }
+        .editor-statusbar { color: #8b949e !important; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="sidebar-header">
+        <h3>novos posts</h3>
+        <button class="btn btn-new" onclick="createNewPost()" title="New Post">+</button>
+    </div>
+    <div id="file-list">
+        </div>
+</div>
+
+<div id="main">
+    <div id="toolbar">
+        <span id="current-file">No file selected</span>
+        <button class="btn" onclick="saveCurrentFile()">Save Post</button>
+    </div>
+    <textarea id="markdown-editor"></textarea>
+</div>
+
+<script>
+    let currentPath = "";
+    // Initialize SimpleMDE
+    const simplemde = new SimpleMDE({ 
+        element: document.getElementById("markdown-editor"),
+        spellChecker: false,
+        autosave: { enabled: false },
+        promptURLs: true
+    });
+
+    // 1. Fetch and list posts
+    async function loadFileList() {
+        try {
+            const res = await fetch('/editor-api/posts');
+            const files = await res.json();
+            const container = document.getElementById('file-list');
+            container.innerHTML = files.map(f => 
+                `<div class="file-item" data-path="${f.path}" onclick="loadFile('${f.path}')">${f.name}</div>`
+            ).join('');
+        } catch (err) {
+            console.error("Failed to load posts:", err);
+        }
+    }
+
+    // 2. Load file content into editor
+    async function loadFile(path) {
+        currentPath = path;
+        document.getElementById('current-file').innerText = path;
+        
+        try {
+            const res = await fetch(`/editor-api/read/${path}`);
+            if (!res.ok) throw new Error("Read failed");
+            const content = await res.text();
+            simplemde.value(content);
+            
+            // UI Update
+            document.querySelectorAll('.file-item').forEach(el => {
+                el.classList.toggle('active', el.getAttribute('data-path') === path);
+            });
+        } catch (err) {
+            alert("Error loading file.");
+        }
+    }
+
+    // 3. Create a new post with Frontmatter
+    async function createNewPost() {
+        const title = prompt("Enter post title:");
+        if (!title) return;
+        
+        const tags = prompt("Enter tags (comma separated):", "general");
+        if (tags === null) return;
+
+        try {
+            const res = await fetch('/editor-api/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, tags })
+            });
+
+            if (res.ok) {
+                const newPath = await res.text();
+                await loadFileList(); 
+                await loadFile(newPath);
+            } else {
+                const err = await res.text();
+                alert(`Error: ${err}`);
+            }
+        } catch (err) {
+            alert("Failed to reach server.");
+        }
+    }
+
+    // 4. Save content back to disk
+    async function saveCurrentFile() {
+        if (!currentPath) return alert("Please select a file first.");
+        const content = simplemde.value();
+        
+        try {
+            const res = await fetch(`/editor-api/save/${currentPath}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+
+            if (res.ok) {
+                console.log("Saved successfully");
+                // Optional: Show a brief "Saved!" toast
+            } else {
+                alert("Save failed.");
+            }
+        } catch (err) {
+            alert("Server connection error.");
+        }
+    }
+
+    // Initial Load
+    loadFileList();
+</script>
+</body>
+</html>
