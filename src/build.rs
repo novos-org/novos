@@ -426,7 +426,7 @@ pub fn perform_build(
             };
             
             if let Ok(rendered) = tera.render(template, &tax_ctx) {
-                let mut final_html = process_html(rendered, config.build.minify_html, is_dev);
+                let final_html = process_html(rendered, config.build.minify_html, is_dev);
                 // Filenames are lowercased for URL consistency (e.g., tags/rust.html)
                 let dest = tax_out_dir.join(format!("{}.html", tag.to_lowercase()));
                 fs::write(dest, final_html).ok();

@@ -114,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
                     build::perform_build(&config, last_run, cli.verbose, false)?;
                     println!("\x1b[32msuccess\x1b[0m Build complete in {:.2}s.", start.elapsed().as_secs_f32());
                 }
-                Commands::Serve { port } | Commands::Serve { port } => {
+                Commands::Serve { port } => {
                     println!("novos serve v{}", env!("CARGO_PKG_VERSION"));
                     println!("\x1b[2m[1/1]\x1b[0m Starting server on port {}...", port);
                     

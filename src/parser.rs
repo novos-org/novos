@@ -1,8 +1,7 @@
-use crate::config::Config;
 use crate::models::Post;
 use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use std::{time::SystemTime};
-use tera::{Context, Tera};
+use tera::Tera;
 
 // Syntect imports
 use syntect::highlighting::Theme;
@@ -116,37 +115,6 @@ pub fn render_markdown(
     let mut html_output = String::new();
     html::push_html(&mut html_output, events.into_iter());
     html_output
-}
-
-/// The core engine: uses Tera to render the final HTML.
-/// Replaces the old recursive 'resolve_tags' logic.
-pub fn render_template(
-    tera: &Tera,
-    template_name: &str,
-    post: &Post,
-    config: &Config,
-    posts_list_html: &str,
-    rendered_content: &str,
-) -> String {
-    let mut context = Context::new();
-    
-    // Inject data into the template context
-    context.insert("post", post);
-    context.insert("config", config);
-    context.insert("content", rendered_content);
-    context.insert("posts", posts_list_html);
-    
-    // Helper variables for cleaner template access
-    context.insert("site_title", &config.site.title);
-    context.insert("base_url", &config.base_url);
-
-    match tera.render(template_name, &context) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error rendering {}: {}", template_name, e);
-            format!("Rendering Error: {}", e)
-        }
-    }
 }
 
 /// Strips Markdown syntax to produce clean plain text for search indexing.
