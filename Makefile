@@ -25,7 +25,7 @@ dist: build
 	@cd ${DIST_DIR} && \
 		sha256sum ${PKG_NAME} > ${PKG_NAME}.sha256 && \
 		sha512sum ${PKG_NAME} > ${PKG_NAME}.sha512 && \
-		b3sum     ${PKG_NAME} > ${PKG_NAME}.b3sum && \
+		(command -v b3sum >/dev/null && b3sum ${PKG_NAME} > ${PKG_NAME}.b3sum || echo "Skipping b3sum...") && \
 		sha1sum   ${PKG_NAME} > ${PKG_NAME}.sha1
 
 clean:
