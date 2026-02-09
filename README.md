@@ -70,11 +70,10 @@ Documentation is available at [docs/](./docs)
 - **License:** APACHE-2.0 OR MIT
 
 ## Building
-To build novos, you need: bmake (BSD make), b3sum (for dist), Cargo, CC (clang, gcc), Rustc (rust itself!), and a POSIX-compliant system.
+To build novos, you need: sh (bash, dash, zsh, ash, ksh, etc), b3sum (for dist), Cargo, CC (clang, gcc), Rustc (rust itself!), and a POSIX-compliant system.
 
 ```sh
-bmake build
-# if dist, bmake dist
+./build.sh build # dist for dist
 ```
 
 *Commits prior to 2d1acf1be5fb605694cc2f95c5efe8dad0b35de0 are three clause BSD. Commits after that point are Apache-2.0 OR MIT*
