@@ -1,0 +1,3 @@
+[submodule "assets/default_site/themes"]
+	path = assets/default_site/themes
+	url = https://github.com/novos-org/themes.git
